@@ -6,19 +6,32 @@ using UnityEngine;
 public class PlayerMovementController : MonoBehaviour
 {
     public float radius;
+
+    /*
+    public Vector3 velocity
+    {
+        get { return rb.velocity; }
+    }
+    */
     public Vector3 velocity;
+
     float playerSpeed = 15.0f;
     Magic equipedMagic;
+    public Sword sword;
 
     float moveHorizontal;
     float moveVertical;
     Vector3 relMousePos;
 
     Animator animator;
+    Rigidbody rb;
+
+
 
     // Start is called before the first frame update
     void Start()
     {
+        rb = GetComponent<Rigidbody>();
 
         GameObject sprite = transform.Find("sprite").gameObject;
         animator = sprite.GetComponent<Animator>();
@@ -30,7 +43,11 @@ public class PlayerMovementController : MonoBehaviour
         transform.forward = -Camera.main.transform.forward;
         transform.up = Camera.main.transform.up;
 
-        
+        //Attach sword to hand
+        Transform hand = transform.Find("Hand");
+        sword.transform.parent = hand;
+        sword.transform.localPosition = Vector3.zero;
+        sword.transform.localRotation = Quaternion.identity;
     }
 
     // Update is called once per frame
@@ -40,7 +57,6 @@ public class PlayerMovementController : MonoBehaviour
         moveVertical = Input.GetAxisRaw("Vertical");
         relMousePos = Input.mousePosition - Camera.main.WorldToScreenPoint(transform.position);
         relMousePos = new Vector3(relMousePos.x, relMousePos.y, 0.0f).normalized;
-        Debug.Log(relMousePos);
 
         if (Input.GetMouseButton(0))
         {
@@ -66,9 +82,8 @@ public class PlayerMovementController : MonoBehaviour
             Vector3.Normalize(movement);
             animator.SetFloat("dy", movement.z);
             animator.SetFloat("dx", movement.x);
-
             velocity = movement.normalized * playerSpeed;
-            transform.Translate(velocity * Time.fixedDeltaTime, Space.World);
+            transform.Translate(movement.normalized * playerSpeed * Time.fixedDeltaTime, Space.World);
         }
 
     }
