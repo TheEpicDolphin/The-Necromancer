@@ -422,6 +422,21 @@ public class Graph<T> where T : INode
 
 public class NavigationMesh : MonoBehaviour
 {
+    private static NavigationMesh _instance;
+    public static NavigationMesh Instance { get { return _instance; } }
+
+    private void Awake()
+    {
+        if (_instance != null && _instance != this)
+        {
+            Destroy(this.gameObject);
+        }
+        else
+        {
+            _instance = this;
+        }
+    }
+
     const float LARGE_FLOAT = 10000.0f;
     const float MIN_X_VEL = -20.0f;
     const float MAX_X_VEL = 20.0f;
@@ -444,7 +459,7 @@ public class NavigationMesh : MonoBehaviour
         navMeshGraph = NavMeshToGraph();
     }
 
-    int NavMeshTriFromPos(Vector3 pos)
+    public int NavMeshTriFromPos(Vector3 pos)
     {
         RaycastHit hit;
         if (Physics.Raycast(pos + Vector3.up, Vector3.down, out hit, Mathf.Infinity))
@@ -904,269 +919,28 @@ public class NavigationMesh : MonoBehaviour
         return breadCrumbs;
     }
 
-
-    void LateUpdate()
+    public List<Vector3> GetShortestPath(int startNavMeshTriIdx, int endNavMeshTriIdx, Vector3 startPos, Vector3 endPos, float radius)
     {
-        List<NavAgent> agents = AIManager.Instance.agents;
+        int[] backPointers = navMeshGraph.DijkstrasAlgorithm(endNavMeshTriIdx);
+        List<int> triPath = navMeshGraph.TraceBackPointers(backPointers, startNavMeshTriIdx);
+        List<Vector3> shortestPathPoints = StringPullingAlgorithm(triPath, startPos, endPos, radius);
+        return shortestPathPoints;
+    }
 
-        for (int i = 0; i < agents.Count; i++)
-        {
-            int targetTriIdx = NavMeshTriFromPos(agents[i].target.position);
-            if (targetTriIdx >= 0)
-            {
-                agents[i].targetNavMeshTriIdx = targetTriIdx;
-            }
-
-            int agentTriIdx = NavMeshTriFromPos(agents[i].transform.position);
-            if (agentTriIdx >= 0)
-            {
-                agents[i].navMeshTriIdx = agentTriIdx;
-                int[] backPointers = navMeshGraph.DijkstrasAlgorithm(agents[i].targetNavMeshTriIdx);
-                List<int> triPath = navMeshGraph.TraceBackPointers(backPointers, agents[i].navMeshTriIdx);
-                Vector3 agentStartPos = new Vector3(agents[i].transform.position.x, 0.0f, agents[i].transform.position.z);
-                List<Vector3> shortestPathPoints = StringPullingAlgorithm(triPath, agentStartPos, agents[i].target.position, agents[i].radius);
-                agents[i].pathPoints = shortestPathPoints;
-                agents[i].ORCAHalfPlanes = new List<HalfPlane>();
-
-            }
-            else
-            {
-                //AI agent is out of bounds. Make it head towards last navigation mesh triangle
-                agents[i].pathPoints = new List<Vector3>() { navMeshGraph.nodes[agents[i].navMeshTriIdx].centroid };
-                agents[i].ORCAHalfPlanes = new List<HalfPlane>();
-            }
-
-        }
-
-        //TODO: Optimize this
-        for (int i = 0; i < agents.Count; i++)
-        {
-            NavAgent agentA = agents[i];
-            Player2AgentORCA(ref AIManager.Instance.playerAgent, ref agentA);
-            for (int j = i + 1; j < agents.Count; j++)
-            {
-                NavAgent agentB = agents[j];
-                Agent2AgentORCA(ref agentA, ref agentB);
-            }
-        }
-
-
-        foreach (NavAgent agentA in agents)
-        {
-            bool noValidVelocity = false;
-            Vector2 desiredVelocity = new Vector2(agentA.desiredHeading.x, agentA.desiredHeading.z);
-            Vector2 optimalHeading = desiredVelocity;
-
-            List<HalfPlane> bounds = new List<HalfPlane>();
-            bounds.Add(new HalfPlane(Vector2.down, new Vector2(0, 10), 1.0f));
-            bounds.Add(new HalfPlane(Vector2.up, new Vector2(0, -10), 1.0f));
-            bounds.Add(new HalfPlane(Vector2.left, new Vector2(10, 0), 1.0f));
-            bounds.Add(new HalfPlane(Vector2.right, new Vector2(-10, 0), 1.0f));
-
-            foreach (HalfPlane halfPlane in agentA.ORCAHalfPlanes)
-            {
-                /*
-                if(agentA.id == "A")
-                {
-                    TraceHalfPlane(agentA, halfPlane);
-                }
-                */
-                
-
-                if (Vector2.Dot(optimalHeading - halfPlane.p, halfPlane.n) < 0)
-                {
-                    Vector2 dir = Vector2.Perpendicular(halfPlane.n);
-                    LineSegment optimalInterval = new LineSegment(halfPlane.p - LARGE_FLOAT * dir, halfPlane.p + LARGE_FLOAT * dir);
-                    foreach (HalfPlane bound in bounds)
-                    {
-                        float D = halfPlane.n.x * bound.n.y - halfPlane.n.y * bound.n.x;
-                        float Dx = Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.y - halfPlane.n.y * Vector2.Dot(bound.n, bound.p);
-                        float Dy = halfPlane.n.x * Vector2.Dot(bound.n, bound.p) - Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.x;
-                        Vector2 intersection = new Vector2(Dx / D, Dy / D);
-
-                        if (Vector2.Dot(bound.n, dir) > 0)
-                        {
-                            if (Vector2.Dot(intersection - optimalInterval.p1, dir) > 0)
-                            {
-                                optimalInterval.p1 = intersection;
-                            }
-                        }
-                        else
-                        {
-                            if (Vector2.Dot(intersection - optimalInterval.p2, -dir) > 0)
-                            {
-                                optimalInterval.p2 = intersection;
-                            }
-                        }
-                    }
-
-                    if (Vector2.Dot(optimalInterval.Dir, dir) > 0)
-                    {
-                        optimalHeading = Vector2.Distance(optimalInterval.p1, desiredVelocity) < Vector2.Distance(optimalInterval.p2, desiredVelocity) ? optimalInterval.p1 : optimalInterval.p2;
-
-                        //Test perpendicular distance from desiredVelocity to optimalInterval
-                        Vector2 n = Vector2.Perpendicular(optimalInterval.Dir);
-                        float D = optimalInterval.Dir.x * n.y - optimalInterval.Dir.y * n.x;
-                        float Dx = Vector2.Dot(optimalInterval.Dir, desiredVelocity) * n.y - optimalInterval.Dir.y * Vector2.Dot(n, optimalInterval.p1);
-                        float Dy = optimalInterval.Dir.x * Vector2.Dot(n, optimalInterval.p1) - Vector2.Dot(optimalInterval.Dir, desiredVelocity) * n.x;
-                        Vector2 potentialHeading = new Vector2(Dx / D, Dy / D);
-                        if (Vector2.Distance(potentialHeading, desiredVelocity) < Vector2.Distance(optimalHeading, desiredVelocity) &&
-                            Vector2.Dot(optimalInterval.p2 - potentialHeading, optimalInterval.p1 - potentialHeading) < 0)
-                        {
-                            optimalHeading = potentialHeading;
-                        }
-                    }
-                    else
-                    {
-                        noValidVelocity = true;
-                        break;
-                    }
-                }
-                bounds.Add(halfPlane);
-            }
-
-
-
-            if (noValidVelocity)
-            {
-                //There is no velocity that avoids obstacles. Find velocity that satisfies the least squares
-                //distances from each half plane
-
-                float[,] AT_A = new float[2, 2] { {0.0f, 0.0f },
-                                              {0.0f, 0.0f } };
-                float[] AT_b = new float[2] { 0.0f, 0.0f };
-
-                foreach (HalfPlane halfPlane in agentA.ORCAHalfPlanes)
-                {
-                    Vector2 Ai = halfPlane.n / halfPlane.weight;
-                    float bi = Vector2.Dot(halfPlane.n, halfPlane.p) / halfPlane.weight;
-                    AT_A[0, 0] += Ai[0] * Ai[0];
-                    AT_A[1, 0] += Ai[1] * Ai[0];
-                    AT_A[0, 1] += Ai[0] * Ai[1];
-                    AT_A[1, 1] += Ai[1] * Ai[1];
-                    AT_b[0] += Ai[0] * bi;
-                    AT_b[1] += Ai[1] * bi;
-                }
-
-                float[,] AT_A_inv = new float[2, 2];
-                float det = AT_A[0, 0] * AT_A[1, 1] - AT_A[1, 0] * AT_A[0, 1];
-                AT_A_inv[0, 0] = AT_A[1, 1] / det;
-                AT_A_inv[1, 0] = -AT_A[1, 0] / det;
-                AT_A_inv[0, 1] = -AT_A[0, 1] / det;
-                AT_A_inv[1, 1] = AT_A[0, 0] / det;
-
-                float xVel = AT_A_inv[0, 0] * AT_b[0] + AT_A_inv[0, 1] * AT_b[1];
-                float zVel = AT_A_inv[1, 0] * AT_b[0] + AT_A_inv[1, 1] * AT_b[1];
-                optimalHeading = new Vector2(xVel, zVel);
-                optimalHeading = Mathf.Clamp(optimalHeading.magnitude, 0.0f, 10.0f) * optimalHeading.normalized;
-            }
-
-            agentA.MoveAgent(new Vector3(optimalHeading.x, 0.0f, optimalHeading.y));
-        }
-
-
+    public Vector3 GetTriPosition(int navMeshTriIdx)
+    {
+        return navMeshGraph.nodes[navMeshTriIdx].centroid;
     }
 
     void TraceHalfPlane(NavAgent agent, HalfPlane halfPlane)
     {
-        //Debug.Log(halfPlane.n);
         Vector3 start = new Vector3(agent.transform.position.x, 1.0f, agent.transform.position.z) + new Vector3(halfPlane.p.x, 0.0f, halfPlane.p.y);
         Vector2 lineDir = Vector2.Perpendicular(halfPlane.n);
         Debug.DrawLine(start, start + 30.0f * new Vector3(lineDir.x, 0, lineDir.y), Color.yellow);
         Debug.DrawLine(start, start - 30.0f * new Vector3(lineDir.x, 0, lineDir.y), Color.yellow);
         Debug.DrawLine(start, start + 5.0f * new Vector3(halfPlane.n.x, 0, halfPlane.n.y), Color.cyan);
+    }   
 
-    }
-
-    //Create Optimal reciprocal Collision Avoidance half plane
-    void Agent2AgentORCA(ref NavAgent agentA, ref NavAgent agentB)
-    {
-        Vector3 dp = agentB.transform.position - agentA.transform.position;
-        Vector2 vCenter = new Vector2(dp.x, dp.z);
-        Vector2 vCenterScaled = new Vector2(dp.x, dp.z) / tau;
-        float r = agentA.radius + agentB.radius;
-        float r_scaled = r / tau;
-        float phi = Mathf.Abs(Mathf.Asin(Mathf.Min(r / vCenter.magnitude, 1.0f))) * Mathf.Rad2Deg;
-        float alpha = 90.0f - phi;
-
-        Vector2 velObstacleDir = (vCenter - vCenterScaled).normalized;
-
-        Vector2 vOptA = new Vector2(agentA.desiredHeading.x, agentA.desiredHeading.z);
-        Vector2 vOptB = new Vector2(agentB.desiredHeading.x, agentB.desiredHeading.z);
-        Vector2 vx = vOptA - vOptB;
-        Vector2 vx_c = vx - vCenterScaled;
-
-        float theta = Vector2.SignedAngle(velObstacleDir, vx_c);
-        //float theta = Vector3.SignedAngle(new Vector3(velObstacleDir[0], 0, velObstacleDir[1]), new Vector3(vx_c[0], 0, vx_c[1]), Vector3.up);
-        Vector2 u;
-        Vector2 n;
-
-        if (theta < 0.0f && theta > -(180.0f - alpha))
-        {
-            Vector2 b1 = Quaternion.AngleAxis(-phi, new Vector3(0, 0, 1)) * vCenter;
-            u = Vector2.Dot(vx, b1.normalized) * b1.normalized - vx;
-            n = -Vector2.Perpendicular(b1).normalized;
-        }
-        else if (theta >= 0.0f && theta < (180.0f - alpha))
-        {
-            Vector2 b2 = Quaternion.AngleAxis(phi, new Vector3(0, 0, 1)) * vCenter;
-            u = Vector2.Dot(vx, b2.normalized) * b2.normalized - vx;
-            n = Vector2.Perpendicular(b2).normalized;
-        }
-        else
-        {
-            u = (r_scaled * vx_c.normalized + vCenterScaled) - vx;
-            n = vx_c.magnitude < Mathf.Epsilon ? -vCenter.normalized : vx_c.normalized;
-        }
-
-
-        agentA.ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, (vCenter - vCenterScaled).magnitude));
-        agentB.ORCAHalfPlanes.Add(new HalfPlane(-n, vOptB - 0.5f * u, (vCenter - vCenterScaled).magnitude));
-    }
-
-   
-    void Player2AgentORCA(ref PlayerMovementController agentA, ref NavAgent agentB)
-    {
-        Vector3 dp = agentB.transform.position - agentA.transform.position;
-        Vector2 vCenter = new Vector2(dp.x, dp.z);
-        Vector2 vCenterScaled = new Vector2(dp.x, dp.z) / tau;
-        float r = agentA.radius + agentB.radius;
-        float r_scaled = r / tau;
-        float phi = Mathf.Abs(Mathf.Asin(Mathf.Min(r / vCenter.magnitude, 1.0f))) * Mathf.Rad2Deg;
-        float alpha = 90.0f - phi;
-
-        Vector2 velObstacleDir = (vCenter - vCenterScaled).normalized;
-
-        Vector2 vOptA = new Vector2(agentA.velocity.x, agentA.velocity.z);
-        Vector2 vOptB = new Vector2(agentB.desiredHeading.x, agentB.desiredHeading.z);
-        Vector2 vx = vOptA - vOptB;
-        Vector2 vx_c = vx - vCenterScaled;
-
-        float theta = Vector2.SignedAngle(velObstacleDir, vx_c);
-        //float theta = Vector3.SignedAngle(new Vector3(velObstacleDir[0], 0, velObstacleDir[1]), new Vector3(vx_c[0], 0, vx_c[1]), Vector3.up);
-        Vector2 u;
-        Vector2 n;
-
-        if (theta < 0.0f && theta > -(180.0f - alpha))
-        {
-            Vector2 b1 = Quaternion.AngleAxis(-phi, new Vector3(0, 0, 1)) * vCenter;
-            u = Vector2.Dot(vx, b1.normalized) * b1.normalized - vx;
-            n = -Vector2.Perpendicular(b1).normalized;
-        }
-        else if (theta >= 0.0f && theta < (180.0f - alpha))
-        {
-            Vector2 b2 = Quaternion.AngleAxis(phi, new Vector3(0, 0, 1)) * vCenter;
-            u = Vector2.Dot(vx, b2.normalized) * b2.normalized - vx;
-            n = Vector2.Perpendicular(b2).normalized;
-        }
-        else
-        {
-            u = (r_scaled * vx_c.normalized + vCenterScaled) - vx;
-            n = vx_c.magnitude < Mathf.Epsilon ? -vCenter.normalized : vx_c.normalized;
-        }
-
-        agentB.ORCAHalfPlanes.Add(new HalfPlane(-n, vOptB - u, 0.01f * (vCenter - vCenterScaled).magnitude));
-    }
     
 }
 

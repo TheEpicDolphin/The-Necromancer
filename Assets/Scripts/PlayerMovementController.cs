@@ -25,13 +25,14 @@ public class PlayerMovementController : MonoBehaviour
 
     Animator animator;
     Rigidbody rb;
-
+    Resurrector resurrector;
 
 
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        resurrector = transform.Find("Resurrector").gameObject.GetComponent<Resurrector>();
 
         GameObject sprite = transform.Find("sprite").gameObject;
         animator = sprite.GetComponent<Animator>();
@@ -48,6 +49,8 @@ public class PlayerMovementController : MonoBehaviour
         sword.transform.parent = hand;
         sword.transform.localPosition = Vector3.zero;
         sword.transform.localRotation = Quaternion.identity;
+
+        
     }
 
     // Update is called once per frame

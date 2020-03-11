@@ -10,7 +10,6 @@ public class Spawner : MonoBehaviour
     void Start()
     {
         nextSpawnTime = Time.time;
-        
     }
 
     // Update is called once per frame
@@ -24,8 +23,6 @@ public class Spawner : MonoBehaviour
             enemyAI.transform.position = transform.position;
             enemyAI.target = AIManager.Instance.playerAgent.transform;
             enemyAI.playerTrans = AIManager.Instance.playerAgent.transform;
-            AIManager.Instance.agents.Add(enemyAI);
-            AIManager.Instance.enemies.Add(enemyAI);
         }
         
     }
