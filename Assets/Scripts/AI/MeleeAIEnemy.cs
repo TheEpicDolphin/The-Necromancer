@@ -9,13 +9,13 @@ public class MeleeAIEnemy : NavAgent
     {
         Attacking,
         Dying,
-        Dead,
-        Despawning
+        Dead
     }
     AIState state;
     public Transform playerTrans;
-    float ATTACK_RADIUS = 30.0f;
-    float HIT_STRENGTH = 20.0f;
+    const float ATTACK_RADIUS = 30.0f;
+    const float HIT_STRENGTH = 20.0f;
+    public const float DESPAWN_TIME = 5.0f; //The time it takes for an enemy to despawn after it dies 
     public UnityEvent deathEvent = new UnityEvent();
     List<MeleeAIAlly> nearbyAllies = new List<MeleeAIAlly>();
     Coroutine nearbyAlliesCoroutine;
@@ -49,12 +49,11 @@ public class MeleeAIEnemy : NavAgent
             case AIState.Dying:
                 //Play dying animation with coroutine maybe
                 state = AIState.Dead;
+                StartCoroutine(Despawn());
                 break;
             case AIState.Dead:
                 //In this state, the enemy can potentially be revived by the player. If we wait too long, the enemy
                 //will despawn
-                break;
-            case AIState.Despawning:
                 break;
         }
     }
@@ -153,6 +152,13 @@ public class MeleeAIEnemy : NavAgent
         }
     }
 
+    IEnumerator Despawn()
+    {
+        yield return new WaitForSeconds(DESPAWN_TIME);
+        Destroy(this.gameObject);
+    }
+
+
     //This gets called before Update functions.
     private void OnTriggerStay(Collider other)
     {
@@ -162,7 +168,8 @@ public class MeleeAIEnemy : NavAgent
             MeleeAIAlly allyAI = other.gameObject.GetComponent<MeleeAIAlly>();
             nextAttackTime = Time.time + Random.Range(0.5f, 1.0f);
             //nextAttackTime = Time.time + 0.5f;
-            Vector3 knockbackDir = (allyAI.transform.position - this.transform.position).normalized;
+            Vector3 temp = allyAI.transform.position - this.transform.position;
+            Vector3 knockbackDir = (new Vector3(temp.x, 0.0f, temp.z)).normalized;
             allyAI.TakeDamage(1, HIT_STRENGTH * knockbackDir);
         }
     }
