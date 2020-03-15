@@ -462,7 +462,7 @@ public class NavigationMesh : MonoBehaviour
     public int NavMeshTriFromPos(Vector3 pos)
     {
         RaycastHit hit;
-        if (Physics.Raycast(pos + Vector3.up, Vector3.down, out hit, Mathf.Infinity))
+        if (Physics.Raycast(pos + Vector3.up, Vector3.down, out hit, Mathf.Infinity, 1 << 13))
         {
             return hit.triangleIndex;
         }

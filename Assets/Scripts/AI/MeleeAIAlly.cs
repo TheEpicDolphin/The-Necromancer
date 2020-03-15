@@ -32,6 +32,12 @@ public class MeleeAIAlly : NavAgent
     new void Start()
     {
         base.Start();
+
+        Vector3 spriteBounds = transform.GetChild(0).gameObject.GetComponent<SpriteRenderer>().bounds.size;
+        radius = spriteBounds.x / 3;
+        transform.forward = -Camera.main.transform.forward;
+        transform.up = Camera.main.transform.up;
+
         nextWanderTime = Time.time;
         nextAttackTime = Time.time;
         state = AIState.ReturningToMaster;
@@ -97,10 +103,8 @@ public class MeleeAIAlly : NavAgent
     {
         if (!overrideNav)
         {
-            rb.velocity = heading;
-            //transform.Translate(heading * Time.deltaTime, Space.World);
             Vector3 curPos = new Vector3(transform.position.x, 0.1f, transform.position.z);
-            //desiredHeading = TARGET_SPEED * (pathPoints[0] - curPos).normalized;
+            rb.MovePosition(curPos + heading * Time.deltaTime);
             //Smooth movement
             if (pathPoints.Count == 1)
             {
