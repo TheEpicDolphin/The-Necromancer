@@ -18,6 +18,7 @@ public class TestAI : NavAgent
         if (!overrideNav)
         {
             Vector3 curPos = new Vector3(transform.position.x, 0.1f, transform.position.z);
+
             rb.MovePosition(curPos + heading * Time.deltaTime);
             //rb.AddForce(heading * Time.deltaTime);
 

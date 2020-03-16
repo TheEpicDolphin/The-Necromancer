@@ -19,7 +19,7 @@ public class NavAgent : MonoBehaviour
 
     protected Rigidbody rb;
     protected bool overrideNav = false;
-    public bool isObstacle = false;
+    int avoidanceLayer = 3;
 
     const float LARGE_FLOAT = 10000.0f;
     const float tau = 1.5f;
@@ -67,7 +67,7 @@ public class NavAgent : MonoBehaviour
             //Player2AgentORCA(AIManager.Instance.playerAgent);
             foreach (NavAgent agentB in nearbyNavAgents)
             {
-                
+                /*
                 if (!isObstacle)
                 {
                     if (agentB.isObstacle)
@@ -79,8 +79,8 @@ public class NavAgent : MonoBehaviour
                         AgentORCA(agentB);
                     }
                 }
-                
-                //AgentORCA(agentB);
+                */
+                AgentORCA(agentB);
             }
 
             Vector3 optimalHeading = GetOptimalHeading();
@@ -95,6 +95,32 @@ public class NavAgent : MonoBehaviour
     private void LateUpdate()
     {
         desiredHeading = tempPreferredHeading;
+        
+
+        float d = Vector3.Distance(target.position, transform.position);
+        if (d < radius)
+        {
+            avoidanceLayer = 0;
+        }
+        else if (d < 3 * radius)
+        {
+            avoidanceLayer = 1;
+        }
+        else if(d < 5 * radius)
+        {
+            avoidanceLayer = 2;
+        }
+        else
+        {
+            avoidanceLayer = 3;
+        }
+
+        
+
+        if(gameObject.name == "TestAI (21)")
+        {
+            Debug.Log(avoidanceLayer);
+        }
     }
 
     public virtual void MoveAgent(Vector3 heading)
@@ -182,7 +208,7 @@ public class NavAgent : MonoBehaviour
 
         if (noValidVelocity)
         {
-            Debug.Log(gameObject.name);
+            //Debug.Log(gameObject.name);
             //There is no velocity that avoids obstacles. Find velocity that satisfies the weighted least squares
             //distances from each half plane
             float[,] AT_A = new float[2, 2] { {0.0f, 0.0f },
@@ -271,7 +297,36 @@ public class NavAgent : MonoBehaviour
             n = vx_c.magnitude < Mathf.Epsilon ? -vCenter.normalized : vx_c.normalized;
         }
 
-        ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, vCenter.magnitude));
+        //ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, vCenter.magnitude));
+
+
+        /*
+        if(vCenter.magnitude < 1.5f * r)
+        {
+            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, 0.01f * vCenter.magnitude));
+        }
+        else
+        {
+            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, vCenter.magnitude));
+        }
+        */
+
+
+        
+        if (avoidanceLayer == agentB.avoidanceLayer)
+        {
+            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, vCenter.magnitude));
+        }
+        else if (avoidanceLayer < agentB.avoidanceLayer)
+        {
+            //ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.0f * u, vCenter.magnitude));
+        }
+        else if (avoidanceLayer > agentB.avoidanceLayer)
+        {
+            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 1.0f * u, 0.01f * vCenter.magnitude));
+        }
+        
+        
     }
 
     void ObstacleORCA(NavAgent obstacleAgent)
