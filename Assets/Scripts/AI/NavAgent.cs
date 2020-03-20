@@ -312,14 +312,14 @@ public class NavAgent : MonoBehaviour
                 Matrix4x4 fromHalfPlaneSpace = toHalfPlaneSpace.transpose;
 
                 Vector3 temp = toHalfPlaneSpace.MultiplyVector(c);
-                Vector2 cTransformed = new Vector2(temp.y, temp.z);
+                Vector2 cTransformed = new Vector2(temp.y, temp.z).normalized;
                 List<HalfPlane2D> halfPlanesTransformed = new List<HalfPlane2D>();
                 foreach (HalfPlane bound in bounds)
                 {
                     temp = toHalfPlaneSpace.MultiplyVector(bound.n);
-                    Vector2 n2d = new Vector2(temp.y, temp.z);
+                    Vector2 n2d = new Vector2(temp.y, temp.z).normalized;
                     temp = toHalfPlaneSpace.MultiplyPoint(bound.p);
-                    Vector2 p2d = new Vector2(temp.y, temp.z);
+                    Vector2 p2d = new Vector2(temp.y, temp.z).normalized;
                     halfPlanesTransformed.Add(new HalfPlane2D(n2d, p2d));
                 }
                 Vector2 vStar = LinearProgram2D(cTransformed, halfPlanesTransformed);
