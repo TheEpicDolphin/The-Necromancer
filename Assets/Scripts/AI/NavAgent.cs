@@ -306,6 +306,7 @@ public class NavAgent : MonoBehaviour
                 toHalfPlaneSpace.SetRow(0, halfPlane.n);
                 toHalfPlaneSpace.SetRow(1, i);
                 toHalfPlaneSpace.SetRow(2, j);
+                toHalfPlaneSpace.SetColumn(3, -halfPlane.p);
                 toHalfPlaneSpace[3, 3] = 1.0f;
 
                 //Transpose is same as inverse for orthogonal matrix
@@ -316,11 +317,16 @@ public class NavAgent : MonoBehaviour
                 List<HalfPlane2D> halfPlanesTransformed = new List<HalfPlane2D>();
                 foreach (HalfPlane bound in bounds)
                 {
-                    temp = toHalfPlaneSpace.MultiplyVector(bound.n);
-                    Vector2 n2d = new Vector2(temp.y, temp.z).normalized;
-                    temp = toHalfPlaneSpace.MultiplyPoint(bound.p);
-                    Vector2 p2d = new Vector2(temp.y, temp.z).normalized;
-                    halfPlanesTransformed.Add(new HalfPlane2D(n2d, p2d));
+                    Vector3 lineDir = Vector3.zero;
+                    Vector3 linePos = Vector3.zero;
+                    if(HalfPlane.Intersection(halfPlane, bound, ref lineDir, ref linePos))
+                    {
+                        temp = toHalfPlaneSpace.MultiplyVector(lineDir);
+                        Vector2 lineDirTransformed = new Vector2(temp.y, temp.z);
+                        temp = toHalfPlaneSpace.MultiplyPoint(linePos);
+                        Vector2 linePosTransformed = new Vector2(temp.y, temp.z);
+                        halfPlanesTransformed.Add(new HalfPlane2D(Vector2.Perpendicular(lineDirTransformed), linePosTransformed));
+                    }
                 }
                 Vector2 vStar = LinearProgram2D(cTransformed, halfPlanesTransformed);
                 optimalHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);

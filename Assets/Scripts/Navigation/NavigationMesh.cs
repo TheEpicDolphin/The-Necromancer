@@ -235,6 +235,24 @@ public class HalfPlane
         this.p = p;
         this.weight = weight;
     }
+
+    public static bool Intersection(HalfPlane plane1, HalfPlane plane2, ref Vector3 lineDir, ref Vector3 linePoint)
+    {
+        lineDir = Vector3.Cross(plane1.n, plane2.n);
+        linePoint = Vector3.zero;
+        float det = lineDir.sqrMagnitude;
+
+        if (det > Mathf.Epsilon)
+        {
+            linePoint = (Vector3.Cross(lineDir, plane2.n) * Vector3.Dot(plane1.n, plane1.p) +
+                        Vector3.Cross(plane1.n, lineDir) * Vector3.Dot(plane2.n, plane2.p)) / det;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 }
 
 
