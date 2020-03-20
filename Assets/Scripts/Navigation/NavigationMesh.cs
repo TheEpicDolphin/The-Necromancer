@@ -208,19 +208,35 @@ public class BoundaryEdge
 }
 
 
-public class HalfPlane
+public class HalfPlane2D
 {
     public Vector2 n;
     public Vector2 p;
     public float weight;
 
-    public HalfPlane(Vector2 n, Vector2 p, float weight)
+    public HalfPlane2D(Vector2 n, Vector2 p, float weight)
     {
         this.n = n;
         this.p = p;
         this.weight = weight;
     }
 }
+
+
+public class HalfPlane
+{
+    public Vector3 n;
+    public Vector3 p;
+    public float weight;
+
+    public HalfPlane(Vector3 n, Vector3 p, float weight)
+    {
+        this.n = n;
+        this.p = p;
+        this.weight = weight;
+    }
+}
+
 
 public interface INode
 {

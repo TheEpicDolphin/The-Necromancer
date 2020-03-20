@@ -12,7 +12,7 @@ public class NavAgent : MonoBehaviour
     public float radius;
     public string id;
     protected float speed = 5.0f;
-    private List<HalfPlane> ORCAHalfPlanes;
+    private List<HalfPlane2D> ORCAHalfPlanes;
     List<NavAgent> nearbyNavAgents = new List<NavAgent>();
     public Vector3 desiredHeading;
     protected Vector3 tempPreferredHeading;
@@ -20,6 +20,8 @@ public class NavAgent : MonoBehaviour
     protected Rigidbody rb;
     protected bool overrideNav = false;
     int avoidanceLayer = 3;
+
+    public bool isSurrounded = false;
 
     const float LARGE_FLOAT = 10000.0f;
     const float tau = 1.5f;
@@ -60,26 +62,13 @@ public class NavAgent : MonoBehaviour
                 pathPoints = new List<Vector3>() { NavigationMesh.Instance.GetTriPosition(navMeshTriIdx) };
             }
 
-            ORCAHalfPlanes = new List<HalfPlane>();
+            ORCAHalfPlanes = new List<HalfPlane2D>();
             UpdateNearbyNavAgents();
 
             //Construct obstacle avoidance planes
             //Player2AgentORCA(AIManager.Instance.playerAgent);
             foreach (NavAgent agentB in nearbyNavAgents)
             {
-                /*
-                if (!isObstacle)
-                {
-                    if (agentB.isObstacle)
-                    {
-                        ObstacleORCA(agentB);
-                    }
-                    else
-                    {
-                        AgentORCA(agentB);
-                    }
-                }
-                */
                 AgentORCA(agentB);
             }
 
@@ -95,32 +84,6 @@ public class NavAgent : MonoBehaviour
     private void LateUpdate()
     {
         desiredHeading = tempPreferredHeading;
-        
-
-        float d = Vector3.Distance(target.position, transform.position);
-        if (d < radius)
-        {
-            avoidanceLayer = 0;
-        }
-        else if (d < 3 * radius)
-        {
-            avoidanceLayer = 1;
-        }
-        else if(d < 5 * radius)
-        {
-            avoidanceLayer = 2;
-        }
-        else
-        {
-            avoidanceLayer = 3;
-        }
-
-        
-
-        if(gameObject.name == "TestAI (21)")
-        {
-            Debug.Log(avoidanceLayer);
-        }
     }
 
     public virtual void MoveAgent(Vector3 heading)
@@ -148,15 +111,15 @@ public class NavAgent : MonoBehaviour
         Vector2 desiredVelocity = new Vector2(desiredHeading.x, desiredHeading.z);
         Vector2 optimalHeading = desiredVelocity;
 
-        List<HalfPlane> bounds = new List<HalfPlane>();
+        List<HalfPlane2D> bounds = new List<HalfPlane2D>();
 
-        foreach (HalfPlane halfPlane in ORCAHalfPlanes)
+        foreach (HalfPlane2D halfPlane in ORCAHalfPlanes)
         {
             if (Vector2.Dot(optimalHeading - halfPlane.p, halfPlane.n) < 0)
             {
                 Vector2 dir = Vector2.Perpendicular(halfPlane.n);
                 LineSegment optimalInterval = new LineSegment(halfPlane.p - LARGE_FLOAT * dir, halfPlane.p + LARGE_FLOAT * dir);
-                foreach (HalfPlane bound in bounds)
+                foreach (HalfPlane2D bound in bounds)
                 {
                     float D = halfPlane.n.x * bound.n.y - halfPlane.n.y * bound.n.x;
                     float Dx = Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.y - halfPlane.n.y * Vector2.Dot(bound.n, bound.p);
@@ -208,7 +171,16 @@ public class NavAgent : MonoBehaviour
 
         if (noValidVelocity)
         {
-            //Debug.Log(gameObject.name);
+            List<HalfPlane> halfPlanes = new List<HalfPlane>();
+            foreach (HalfPlane2D halfPlane2d in ORCAHalfPlanes)
+            {
+                Vector3 n = new Vector3(halfPlane2d.n.x, halfPlane2d.n.y, 1);
+                Vector3 p = new Vector3(halfPlane2d.p.x, halfPlane2d.p.y, 0);
+                halfPlanes.Add(new HalfPlane(n, p, 1.0f));
+            }
+            optimalHeading = LinearProgram3D(new Vector3(0, 0, 1), halfPlanes);
+
+            /*
             //There is no velocity that avoids obstacles. Find velocity that satisfies the weighted least squares
             //distances from each half plane
             float[,] AT_A = new float[2, 2] { {0.0f, 0.0f },
@@ -238,9 +210,83 @@ public class NavAgent : MonoBehaviour
             float zVel = AT_A_inv[1, 0] * AT_b[0] + AT_A_inv[1, 1] * AT_b[1];
             optimalHeading = new Vector2(xVel, zVel);
             optimalHeading = Mathf.Clamp(optimalHeading.magnitude, 0.0f, 10.0f) * optimalHeading.normalized;
-            
+            */
         }
+
+        isSurrounded = noValidVelocity;
+
         return Mathf.Clamp(optimalHeading.magnitude, 0.0f, speed) * new Vector3(optimalHeading.x, 0.0f, optimalHeading.y).normalized;
+    }
+
+    private Vector2 LinearProgram2D(Vector2 c, List<HalfPlane2D> halfPlanes)
+    {
+        Vector2 desiredVelocity = new Vector2(desiredHeading.x, desiredHeading.z);
+        Vector2 optimalHeading = desiredVelocity;
+
+        List<HalfPlane2D> bounds = new List<HalfPlane2D>();
+
+        foreach (HalfPlane2D halfPlane in halfPlanes)
+        {
+            if (Vector2.Dot(c, halfPlane.n) < 0)
+            {
+                Vector2 dir = Vector2.Perpendicular(halfPlane.n);
+                LineSegment optimalInterval = new LineSegment(halfPlane.p - LARGE_FLOAT * dir, halfPlane.p + LARGE_FLOAT * dir);
+                foreach (HalfPlane2D bound in bounds)
+                {
+                    float D = halfPlane.n.x * bound.n.y - halfPlane.n.y * bound.n.x;
+                    float Dx = Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.y - halfPlane.n.y * Vector2.Dot(bound.n, bound.p);
+                    float Dy = halfPlane.n.x * Vector2.Dot(bound.n, bound.p) - Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.x;
+                    Vector2 intersection = new Vector2(Dx / D, Dy / D);
+
+                    if (Vector2.Dot(bound.n, dir) > 0)
+                    {
+                        if (Vector2.Dot(intersection - optimalInterval.p1, dir) > 0)
+                        {
+                            optimalInterval.p1 = intersection;
+                        }
+                    }
+                    else
+                    {
+                        if (Vector2.Dot(intersection - optimalInterval.p2, -dir) > 0)
+                        {
+                            optimalInterval.p2 = intersection;
+                        }
+                    }
+                }
+
+                if (Vector2.Dot(optimalInterval.Dir, dir) > 0)
+                {
+                    optimalHeading = optimalInterval.p1.z > optimalInterval.p2.z ? optimalInterval.p1 : optimalInterval.p2;
+                }
+            }
+            bounds.Add(halfPlane);
+        }
+
+        return optimalHeading;
+    }
+
+    private Vector3 LinearProgram3D(Vector3 c, List<HalfPlane> halfPlanes)
+    {
+        Vector3 optimalHeading = c;
+        List<HalfPlane> bounds = new List<HalfPlane>();
+
+        foreach (HalfPlane halfPlane in halfPlanes)
+        {
+            if (Vector2.Dot(c, halfPlane.n) < 0)
+            {
+                Vector2 cProj = ProjectNewCoords(c);
+                List<HalfPlane2D> halfPlanesProj = new List<HalfPlane2D>();
+                foreach (HalfPlane bound in bounds)
+                {
+                    
+                    halfPlanesProj.Add(new HalfPlane2D());
+                }
+                Vector2 vStar = LinearProgram2D(cProj, halfPlanesProj);
+                optimalHeading = InvProjectNewCoords(vStar);
+            }
+            bounds.Add(halfPlane);
+        }
+        return optimalHeading;
     }
 
 
@@ -263,16 +309,6 @@ public class NavAgent : MonoBehaviour
         Vector2 u;
         Vector2 n;
 
-        /*
-        if (r >= vCenter.magnitude)
-        {
-            u = (-r * vCenter.normalized) + vCenter;
-            n = -vCenter.normalized;
-            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, vCenter.magnitude));
-            return;
-        }
-        */
-
         float phi = Mathf.Abs(Mathf.Asin(Mathf.Min(r / vCenter.magnitude, 1.0f))) * Mathf.Rad2Deg;
         float alpha = 90.0f - phi;
 
@@ -297,80 +333,59 @@ public class NavAgent : MonoBehaviour
             n = vx_c.magnitude < Mathf.Epsilon ? -vCenter.normalized : vx_c.normalized;
         }
 
-        //ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, vCenter.magnitude));
+        ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
 
+        //float d = Mathf.Min(Vector3.Distance(agentB.target.position, agentB.transform.position), 20.0f);
+        //float f = d / 20.0f;
+        //ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, Mathf.Pow(f, 10)));
 
         /*
         if(vCenter.magnitude < 1.5f * r)
         {
-            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, 0.01f * vCenter.magnitude));
+            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, 0.01f * vCenter.magnitude));
         }
         else
         {
-            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, vCenter.magnitude));
+            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
         }
         */
 
 
-        
+        /*
         if (avoidanceLayer == agentB.avoidanceLayer)
         {
-            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.5f * u, vCenter.magnitude));
+            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
         }
         else if (avoidanceLayer < agentB.avoidanceLayer)
         {
-            //ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 0.0f * u, vCenter.magnitude));
+            //ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.0f * u, vCenter.magnitude));
         }
         else if (avoidanceLayer > agentB.avoidanceLayer)
         {
-            ORCAHalfPlanes.Add(new HalfPlane(n, vOptA + 1.0f * u, 0.01f * vCenter.magnitude));
+            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 1.0f * u, 0.01f * vCenter.magnitude));
         }
-        
-        
-    }
+        */
 
-    void ObstacleORCA(NavAgent obstacleAgent)
-    {
-        Vector3 dp = transform.position - obstacleAgent.transform.position;
-        Vector2 vCenter = new Vector2(dp.x, dp.z);
-        Vector2 vCenterScaled = new Vector2(dp.x, dp.z) / tau;
-        float r = obstacleAgent.radius + radius;
-        float r_scaled = r / tau;
-        float phi = Mathf.Abs(Mathf.Asin(Mathf.Min(r / vCenter.magnitude, 1.0f))) * Mathf.Rad2Deg;
-        float alpha = 90.0f - phi;
-
-        Vector2 velObstacleDir = (vCenter - vCenterScaled).normalized;
-
-        Vector2 vOptA = new Vector2(obstacleAgent.desiredHeading.x, obstacleAgent.desiredHeading.z);
-        Vector2 vOptB = new Vector2(desiredHeading.x, desiredHeading.z);
-        Vector2 vx = vOptA - vOptB;
-        Vector2 vx_c = vx - vCenterScaled;
-
-        float theta = Vector2.SignedAngle(velObstacleDir, vx_c);
-        //float theta = Vector3.SignedAngle(new Vector3(velObstacleDir[0], 0, velObstacleDir[1]), new Vector3(vx_c[0], 0, vx_c[1]), Vector3.up);
-        Vector2 u;
-        Vector2 n;
-
-        if (theta < 0.0f && theta > -(180.0f - alpha))
+        /*
+        if(isSurrounded && agentB.isSurrounded)
         {
-            Vector2 b1 = Quaternion.AngleAxis(-phi, new Vector3(0, 0, 1)) * vCenter;
-            u = Vector2.Dot(vx, b1.normalized) * b1.normalized - vx;
-            n = -Vector2.Perpendicular(b1).normalized;
+            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
         }
-        else if (theta >= 0.0f && theta < (180.0f - alpha))
+        else if (isSurrounded)
         {
-            Vector2 b2 = Quaternion.AngleAxis(phi, new Vector3(0, 0, 1)) * vCenter;
-            u = Vector2.Dot(vx, b2.normalized) * b2.normalized - vx;
-            n = Vector2.Perpendicular(b2).normalized;
+
+        }
+        else if (agentB.isSurrounded)
+        {
+            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 1.0f * u, 0.001f * vCenter.magnitude));
         }
         else
         {
-            u = (r_scaled * vx_c.normalized + vCenterScaled) - vx;
-            n = vx_c.magnitude < Mathf.Epsilon ? -vCenter.normalized : vx_c.normalized;
+            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
         }
-
-        ORCAHalfPlanes.Add(new HalfPlane(-n, vOptB - u, (vCenter - vCenterScaled).magnitude));
+        */
     }
+
 
 
     void PlayerORCA(PlayerMovementController player)
@@ -413,7 +428,7 @@ public class NavAgent : MonoBehaviour
             n = vx_c.magnitude < Mathf.Epsilon ? -vCenter.normalized : vx_c.normalized;
         }
 
-        ORCAHalfPlanes.Add(new HalfPlane(-n, vOptB - u, 0.01f * (vCenter - vCenterScaled).magnitude));
+        ORCAHalfPlanes.Add(new HalfPlane2D(-n, vOptB - u, 0.01f * (vCenter - vCenterScaled).magnitude));
     }
 
     protected IEnumerator PauseNav(float t)
