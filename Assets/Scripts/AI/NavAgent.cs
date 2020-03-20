@@ -220,8 +220,7 @@ public class NavAgent : MonoBehaviour
 
     private Vector2 LinearProgram2D(Vector2 c, List<HalfPlane2D> halfPlanes)
     {
-        Vector2 desiredVelocity = new Vector2(desiredHeading.x, desiredHeading.z);
-        Vector2 optimalHeading = desiredVelocity;
+        Vector2 optimalHeading = c;
 
         List<HalfPlane2D> bounds = new List<HalfPlane2D>();
 
@@ -256,7 +255,20 @@ public class NavAgent : MonoBehaviour
 
                 if (Vector2.Dot(optimalInterval.Dir, dir) > 0)
                 {
-                    optimalHeading = optimalInterval.p1.z > optimalInterval.p2.z ? optimalInterval.p1 : optimalInterval.p2;
+                    
+                    optimalHeading = Vector2.Distance(optimalInterval.p1, c) < Vector2.Distance(optimalInterval.p2, c) ? optimalInterval.p1 : optimalInterval.p2;
+
+                    //Test perpendicular distance from desiredVelocity to optimalInterval
+                    Vector2 n = Vector2.Perpendicular(optimalInterval.Dir);
+                    float D = optimalInterval.Dir.x * n.y - optimalInterval.Dir.y * n.x;
+                    float Dx = Vector2.Dot(optimalInterval.Dir, c) * n.y - optimalInterval.Dir.y * Vector2.Dot(n, optimalInterval.p1);
+                    float Dy = optimalInterval.Dir.x * Vector2.Dot(n, optimalInterval.p1) - Vector2.Dot(optimalInterval.Dir, c) * n.x;
+                    Vector2 potentialHeading = new Vector2(Dx / D, Dy / D);
+                    if (Vector2.Distance(potentialHeading, c) < Vector2.Distance(optimalHeading, c) &&
+                        Vector2.Dot(optimalInterval.p2 - potentialHeading, optimalInterval.p1 - potentialHeading) < 0)
+                    {
+                        optimalHeading = potentialHeading;
+                    }
                 }
             }
             bounds.Add(halfPlane);
@@ -274,15 +286,44 @@ public class NavAgent : MonoBehaviour
         {
             if (Vector2.Dot(c, halfPlane.n) < 0)
             {
-                Vector2 cProj = ProjectNewCoords(c);
-                List<HalfPlane2D> halfPlanesProj = new List<HalfPlane2D>();
+                /*
+                Vector3 upRef = Vector3.up;
+                if(Vector3.Angle(upRef, halfPlane.n) <= Mathf.Epsilon)
+                {
+                    upRef = Vector3.right;
+                }
+                Vector3 j = Vector3.ProjectOnPlane(upRef, halfPlane.n).normalized;
+                Vector3 i = Vector3.Cross(j, halfPlane.n).normalized;
+                */
+                Vector3 i = Vector3.right;
+                Vector3 j = Vector3.up;
+                Vector3.OrthoNormalize(ref halfPlane.n, ref i, ref j);
+
+                // Copy the three new basis vectors into the rows of a matrix
+                // (since it is actually a 4x4 matrix, the bottom right corner
+                // should also be set to 1).
+                Matrix4x4 toHalfPlaneSpace = new Matrix4x4();
+                toHalfPlaneSpace.SetRow(0, halfPlane.n);
+                toHalfPlaneSpace.SetRow(1, i);
+                toHalfPlaneSpace.SetRow(2, j);
+                toHalfPlaneSpace[3, 3] = 1.0f;
+
+                //Transpose is same as inverse for orthogonal matrix
+                Matrix4x4 fromHalfPlaneSpace = toHalfPlaneSpace.transpose;
+
+                Vector3 temp = toHalfPlaneSpace.MultiplyVector(c);
+                Vector2 cTransformed = new Vector2(temp.y, temp.z);
+                List<HalfPlane2D> halfPlanesTransformed = new List<HalfPlane2D>();
                 foreach (HalfPlane bound in bounds)
                 {
-                    
-                    halfPlanesProj.Add(new HalfPlane2D());
+                    temp = toHalfPlaneSpace.MultiplyVector(bound.n);
+                    Vector2 n2d = new Vector2(temp.y, temp.z);
+                    temp = toHalfPlaneSpace.MultiplyPoint(bound.p);
+                    Vector2 p2d = new Vector2(temp.y, temp.z);
+                    halfPlanesTransformed.Add(new HalfPlane2D(n2d, p2d));
                 }
-                Vector2 vStar = LinearProgram2D(cProj, halfPlanesProj);
-                optimalHeading = InvProjectNewCoords(vStar);
+                Vector2 vStar = LinearProgram2D(cTransformed, halfPlanesTransformed);
+                optimalHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
             }
             bounds.Add(halfPlane);
         }

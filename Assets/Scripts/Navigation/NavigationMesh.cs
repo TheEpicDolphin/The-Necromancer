@@ -214,7 +214,7 @@ public class HalfPlane2D
     public Vector2 p;
     public float weight;
 
-    public HalfPlane2D(Vector2 n, Vector2 p, float weight)
+    public HalfPlane2D(Vector2 n, Vector2 p, float weight = 1.0f)
     {
         this.n = n;
         this.p = p;
