@@ -34,6 +34,7 @@ public class NavAgent : MonoBehaviour
         pathPoints = new List<Vector3>();
         rb = GetComponent<Rigidbody>();
         nearbyObstacleRadius = 2 * speed * tau;
+
     }
 
     private void Update()
@@ -248,20 +249,25 @@ public class NavAgent : MonoBehaviour
                 // Copy the three new basis vectors into the rows of a matrix
                 // (since it is actually a 4x4 matrix, the bottom right corner
                 // should also be set to 1).
-                Matrix4x4 toHalfPlaneSpace = new Matrix4x4();
+                Matrix4x4 toHalfPlaneSpace = Matrix4x4.identity;
                 toHalfPlaneSpace.SetRow(0, halfPlane.n);
                 toHalfPlaneSpace.SetRow(1, i);
                 toHalfPlaneSpace.SetRow(2, j);
-                toHalfPlaneSpace.SetColumn(3, -halfPlane.p);
-                toHalfPlaneSpace[3, 3] = 1.0f;
+                
+                Matrix4x4 translate = Matrix4x4.identity;
+                translate.SetColumn(3, -halfPlane.p);
+                translate[3, 3] = 1.0f;
+                toHalfPlaneSpace = toHalfPlaneSpace * translate;
 
                 //Transpose is same as inverse for orthogonal matrix
-                Matrix4x4 fromHalfPlaneSpace = toHalfPlaneSpace.transpose;
+                Matrix4x4 fromHalfPlaneSpace = toHalfPlaneSpace.inverse;
 
                 Vector3 cProj = Vector3.ProjectOnPlane(c, halfPlane.n);
                 Vector3 temp = toHalfPlaneSpace.MultiplyPoint(cProj);
                 Vector2 cTransformed = new Vector2(temp.y, temp.z).normalized;
                 List<HalfPlane2D> halfPlanesTransformed = new List<HalfPlane2D>();
+
+                
                 
                 foreach (HalfPlane bound in bounds)
                 {
@@ -274,8 +280,7 @@ public class NavAgent : MonoBehaviour
                         Vector2 lineDirTransformed = new Vector2(temp.y, temp.z);
                         temp = toHalfPlaneSpace.MultiplyPoint(linePos);
                         Vector2 linePosTransformed = new Vector2(temp.y, temp.z);
-                        Debug.Log(temp);
-                        halfPlanesTransformed.Add(new HalfPlane2D(Vector2.Perpendicular(lineDirTransformed), linePosTransformed));
+                        halfPlanesTransformed.Add(new HalfPlane2D(Vector2.Perpendicular(lineDirTransformed).normalized, linePosTransformed));
                     }
                 }
                 Vector2 vStar = Vector2.zero;

@@ -242,10 +242,11 @@ public class HalfPlane
         linePoint = Vector3.zero;
         float det = lineDir.sqrMagnitude;
 
+        // If the determinant is 0, that means parallel planes, no intersection.
         if (det > Mathf.Epsilon)
         {
-            linePoint = (Vector3.Cross(lineDir, plane2.n) * Vector3.Dot(plane1.n, plane1.p) +
-                        Vector3.Cross(plane1.n, lineDir) * Vector3.Dot(plane2.n, plane2.p)) / det;
+            linePoint = (Vector3.Cross(lineDir, plane2.n) * -Vector3.Dot(plane1.n, plane1.p) +
+                        Vector3.Cross(plane1.n, lineDir) * -Vector3.Dot(plane2.n, plane2.p)) / det;
             return true;
         }
         else
@@ -491,6 +492,16 @@ public class NavigationMesh : MonoBehaviour
     {
         mesh = GetComponent<MeshFilter>().mesh;
         navMeshGraph = NavMeshToGraph();
+
+        /*
+        HalfPlane hp1 = new HalfPlane(new Vector3(1,1,1).normalized, new Vector3(0, 0, 0));
+        HalfPlane hp2 = new HalfPlane(new Vector3(1,-1,-2).normalized, new Vector3(0, 1, 0));
+        Vector3 lineDir = Vector3.zero;
+        Vector3 linePos = Vector3.zero;
+        HalfPlane.Intersection(hp1, hp2, ref lineDir, ref linePos);
+        Debug.Log(Vector3.Dot(hp1.n, linePos - hp1.p));
+        Debug.Log(Vector3.Dot(hp2.n, linePos - hp2.p));
+        */
     }
 
     public int NavMeshTriFromPos(Vector3 pos)
