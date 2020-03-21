@@ -1969,7 +1969,7 @@ PrefabInstance:
         type: 3}
       propertyPath: target
       value: 
-      objectReference: {fileID: 1985067343}
+      objectReference: {fileID: 2147220820}
     - target: {fileID: 7075007742052270531, guid: 784249de294343c48bc3a433eb3c3189,
         type: 3}
       propertyPath: isObstacle

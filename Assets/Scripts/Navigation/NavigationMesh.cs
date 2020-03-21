@@ -229,7 +229,7 @@ public class HalfPlane
     public Vector3 p;
     public float weight;
 
-    public HalfPlane(Vector3 n, Vector3 p, float weight)
+    public HalfPlane(Vector3 n, Vector3 p, float weight = 1.0f)
     {
         this.n = n;
         this.p = p;

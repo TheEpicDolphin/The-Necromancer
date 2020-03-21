@@ -21,8 +21,6 @@ public class NavAgent : MonoBehaviour
     protected bool overrideNav = false;
     int avoidanceLayer = 3;
 
-    public bool isSurrounded = false;
-
     const float LARGE_FLOAT = 10000.0f;
     const float tau = 1.5f;
     float nearbyObstacleRadius; 
@@ -107,13 +105,68 @@ public class NavAgent : MonoBehaviour
 
     public Vector3 GetOptimalHeading()
     {
-        bool noValidVelocity = false;
         Vector2 desiredVelocity = new Vector2(desiredHeading.x, desiredHeading.z);
         Vector2 optimalHeading = desiredVelocity;
 
+        if (!LinearProgram2D(desiredVelocity, ORCAHalfPlanes, ref optimalHeading))
+        {
+            
+            //3d Linear programming approach to minimize maximum error
+            List<HalfPlane> halfPlanes = new List<HalfPlane>();
+            foreach (HalfPlane2D halfPlane2d in ORCAHalfPlanes)
+            {
+                Vector3 n = new Vector3(halfPlane2d.n.x, halfPlane2d.n.y, 1).normalized;
+                Vector3 p = new Vector3(halfPlane2d.p.x, halfPlane2d.p.y, 0);
+                halfPlanes.Add(new HalfPlane(n, p));
+            }
+            optimalHeading = LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, 1), halfPlanes);
+            
+
+            /*
+            //There is no velocity that avoids obstacles. Find velocity that satisfies the weighted least squares
+            //distances from each half plane
+            float[,] AT_A = new float[2, 2] { {0.0f, 0.0f },
+                                              {0.0f, 0.0f } };
+            float[] AT_b = new float[2] { 0.0f, 0.0f };
+
+            foreach (HalfPlane2D halfPlane in ORCAHalfPlanes)
+            {
+                Vector2 Ai = halfPlane.n / halfPlane.weight;
+                float bi = Vector2.Dot(halfPlane.n, halfPlane.p) / halfPlane.weight;
+                AT_A[0, 0] += Ai[0] * Ai[0];
+                AT_A[1, 0] += Ai[1] * Ai[0];
+                AT_A[0, 1] += Ai[0] * Ai[1];
+                AT_A[1, 1] += Ai[1] * Ai[1];
+                AT_b[0] += Ai[0] * bi;
+                AT_b[1] += Ai[1] * bi;
+            }
+
+            float[,] AT_A_inv = new float[2, 2];
+            float det = AT_A[0, 0] * AT_A[1, 1] - AT_A[1, 0] * AT_A[0, 1];
+            AT_A_inv[0, 0] = AT_A[1, 1] / det;
+            AT_A_inv[1, 0] = -AT_A[1, 0] / det;
+            AT_A_inv[0, 1] = -AT_A[0, 1] / det;
+            AT_A_inv[1, 1] = AT_A[0, 0] / det;
+
+            float xVel = AT_A_inv[0, 0] * AT_b[0] + AT_A_inv[0, 1] * AT_b[1];
+            float zVel = AT_A_inv[1, 0] * AT_b[0] + AT_A_inv[1, 1] * AT_b[1];
+            optimalHeading = new Vector2(xVel, zVel);
+            optimalHeading = Mathf.Clamp(optimalHeading.magnitude, 0.0f, 10.0f) * optimalHeading.normalized;
+            */
+        }
+
+        return Mathf.Clamp(optimalHeading.magnitude, 0.0f, speed) * new Vector3(optimalHeading.x, 0.0f, optimalHeading.y).normalized;
+    }
+
+    /*
+     * Returns true if there is valid solution to 2d linear program. False otherwise.
+     */
+    private bool LinearProgram2D(Vector2 c, List<HalfPlane2D> halfPlanes, ref Vector2 optimalHeading)
+    {
+        optimalHeading = c;
         List<HalfPlane2D> bounds = new List<HalfPlane2D>();
 
-        foreach (HalfPlane2D halfPlane in ORCAHalfPlanes)
+        foreach (HalfPlane2D halfPlane in halfPlanes)
         {
             if (Vector2.Dot(optimalHeading - halfPlane.p, halfPlane.n) < 0)
             {
@@ -144,118 +197,6 @@ public class NavAgent : MonoBehaviour
 
                 if (Vector2.Dot(optimalInterval.Dir, dir) > 0)
                 {
-                    optimalHeading = Vector2.Distance(optimalInterval.p1, desiredVelocity) < Vector2.Distance(optimalInterval.p2, desiredVelocity) ? optimalInterval.p1 : optimalInterval.p2;
-
-                    //Test perpendicular distance from desiredVelocity to optimalInterval
-                    Vector2 n = Vector2.Perpendicular(optimalInterval.Dir);
-                    float D = optimalInterval.Dir.x * n.y - optimalInterval.Dir.y * n.x;
-                    float Dx = Vector2.Dot(optimalInterval.Dir, desiredVelocity) * n.y - optimalInterval.Dir.y * Vector2.Dot(n, optimalInterval.p1);
-                    float Dy = optimalInterval.Dir.x * Vector2.Dot(n, optimalInterval.p1) - Vector2.Dot(optimalInterval.Dir, desiredVelocity) * n.x;
-                    Vector2 potentialHeading = new Vector2(Dx / D, Dy / D);
-                    if (Vector2.Distance(potentialHeading, desiredVelocity) < Vector2.Distance(optimalHeading, desiredVelocity) &&
-                        Vector2.Dot(optimalInterval.p2 - potentialHeading, optimalInterval.p1 - potentialHeading) < 0)
-                    {
-                        optimalHeading = potentialHeading;
-                    }
-                }
-                else
-                {
-                    noValidVelocity = true;
-                    break;
-                }
-            }
-            bounds.Add(halfPlane);
-        }
-
-
-
-        if (noValidVelocity)
-        {
-            List<HalfPlane> halfPlanes = new List<HalfPlane>();
-            foreach (HalfPlane2D halfPlane2d in ORCAHalfPlanes)
-            {
-                Vector3 n = new Vector3(halfPlane2d.n.x, halfPlane2d.n.y, 1);
-                Vector3 p = new Vector3(halfPlane2d.p.x, halfPlane2d.p.y, 0);
-                halfPlanes.Add(new HalfPlane(n, p, 1.0f));
-            }
-            optimalHeading = LinearProgram3D(new Vector3(0, 0, 1), halfPlanes);
-
-            /*
-            //There is no velocity that avoids obstacles. Find velocity that satisfies the weighted least squares
-            //distances from each half plane
-            float[,] AT_A = new float[2, 2] { {0.0f, 0.0f },
-                                              {0.0f, 0.0f } };
-            float[] AT_b = new float[2] { 0.0f, 0.0f };
-
-            foreach (HalfPlane halfPlane in ORCAHalfPlanes)
-            {
-                Vector2 Ai = halfPlane.n / halfPlane.weight;
-                float bi = Vector2.Dot(halfPlane.n, halfPlane.p) / halfPlane.weight;
-                AT_A[0, 0] += Ai[0] * Ai[0];
-                AT_A[1, 0] += Ai[1] * Ai[0];
-                AT_A[0, 1] += Ai[0] * Ai[1];
-                AT_A[1, 1] += Ai[1] * Ai[1];
-                AT_b[0] += Ai[0] * bi;
-                AT_b[1] += Ai[1] * bi;
-            }
-
-            float[,] AT_A_inv = new float[2, 2];
-            float det = AT_A[0, 0] * AT_A[1, 1] - AT_A[1, 0] * AT_A[0, 1];
-            AT_A_inv[0, 0] = AT_A[1, 1] / det;
-            AT_A_inv[1, 0] = -AT_A[1, 0] / det;
-            AT_A_inv[0, 1] = -AT_A[0, 1] / det;
-            AT_A_inv[1, 1] = AT_A[0, 0] / det;
-
-            float xVel = AT_A_inv[0, 0] * AT_b[0] + AT_A_inv[0, 1] * AT_b[1];
-            float zVel = AT_A_inv[1, 0] * AT_b[0] + AT_A_inv[1, 1] * AT_b[1];
-            optimalHeading = new Vector2(xVel, zVel);
-            optimalHeading = Mathf.Clamp(optimalHeading.magnitude, 0.0f, 10.0f) * optimalHeading.normalized;
-            */
-        }
-
-        isSurrounded = noValidVelocity;
-
-        return Mathf.Clamp(optimalHeading.magnitude, 0.0f, speed) * new Vector3(optimalHeading.x, 0.0f, optimalHeading.y).normalized;
-    }
-
-    private Vector2 LinearProgram2D(Vector2 c, List<HalfPlane2D> halfPlanes)
-    {
-        Vector2 optimalHeading = c;
-
-        List<HalfPlane2D> bounds = new List<HalfPlane2D>();
-
-        foreach (HalfPlane2D halfPlane in halfPlanes)
-        {
-            if (Vector2.Dot(c, halfPlane.n) < 0)
-            {
-                Vector2 dir = Vector2.Perpendicular(halfPlane.n);
-                LineSegment optimalInterval = new LineSegment(halfPlane.p - LARGE_FLOAT * dir, halfPlane.p + LARGE_FLOAT * dir);
-                foreach (HalfPlane2D bound in bounds)
-                {
-                    float D = halfPlane.n.x * bound.n.y - halfPlane.n.y * bound.n.x;
-                    float Dx = Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.y - halfPlane.n.y * Vector2.Dot(bound.n, bound.p);
-                    float Dy = halfPlane.n.x * Vector2.Dot(bound.n, bound.p) - Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.x;
-                    Vector2 intersection = new Vector2(Dx / D, Dy / D);
-
-                    if (Vector2.Dot(bound.n, dir) > 0)
-                    {
-                        if (Vector2.Dot(intersection - optimalInterval.p1, dir) > 0)
-                        {
-                            optimalInterval.p1 = intersection;
-                        }
-                    }
-                    else
-                    {
-                        if (Vector2.Dot(intersection - optimalInterval.p2, -dir) > 0)
-                        {
-                            optimalInterval.p2 = intersection;
-                        }
-                    }
-                }
-
-                if (Vector2.Dot(optimalInterval.Dir, dir) > 0)
-                {
-                    
                     optimalHeading = Vector2.Distance(optimalInterval.p1, c) < Vector2.Distance(optimalInterval.p2, c) ? optimalInterval.p1 : optimalInterval.p2;
 
                     //Test perpendicular distance from desiredVelocity to optimalInterval
@@ -270,11 +211,15 @@ public class NavAgent : MonoBehaviour
                         optimalHeading = potentialHeading;
                     }
                 }
+                else
+                {
+                    //No solution
+                    return false;
+                }
             }
             bounds.Add(halfPlane);
         }
-
-        return optimalHeading;
+        return true;
     }
 
     private Vector3 LinearProgram3D(Vector3 c, List<HalfPlane> halfPlanes)
@@ -328,8 +273,11 @@ public class NavAgent : MonoBehaviour
                         halfPlanesTransformed.Add(new HalfPlane2D(Vector2.Perpendicular(lineDirTransformed), linePosTransformed));
                     }
                 }
-                Vector2 vStar = LinearProgram2D(cTransformed, halfPlanesTransformed);
-                optimalHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
+                Vector2 vStar = Vector2.zero;
+                if(LinearProgram2D(cTransformed, halfPlanesTransformed, ref vStar))
+                {
+                    optimalHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
+                }
             }
             bounds.Add(halfPlane);
         }
@@ -413,24 +361,6 @@ public class NavAgent : MonoBehaviour
         }
         */
 
-        /*
-        if(isSurrounded && agentB.isSurrounded)
-        {
-            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
-        }
-        else if (isSurrounded)
-        {
-
-        }
-        else if (agentB.isSurrounded)
-        {
-            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 1.0f * u, 0.001f * vCenter.magnitude));
-        }
-        else
-        {
-            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
-        }
-        */
     }
 
 
