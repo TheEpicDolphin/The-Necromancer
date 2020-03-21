@@ -232,16 +232,6 @@ public class NavAgent : MonoBehaviour
         {
             if (Vector3.Dot(optimalHeading - halfPlane.p, halfPlane.n) < 0)
             {
-                
-                /*
-                Vector3 upRef = Vector3.up;
-                if(Vector3.Angle(upRef, halfPlane.n) <= Mathf.Epsilon)
-                {
-                    upRef = Vector3.right;
-                }
-                Vector3 j = Vector3.ProjectOnPlane(upRef, halfPlane.n).normalized;
-                Vector3 i = Vector3.Cross(j, halfPlane.n).normalized;
-                */
                 Vector3 i = Vector3.right;
                 Vector3 j = Vector3.up;
                 Vector3.OrthoNormalize(ref halfPlane.n, ref i, ref j);
@@ -262,13 +252,10 @@ public class NavAgent : MonoBehaviour
                 //Transpose is same as inverse for orthogonal matrix
                 Matrix4x4 fromHalfPlaneSpace = toHalfPlaneSpace.inverse;
 
-                Vector3 cProj = Vector3.ProjectOnPlane(c, halfPlane.n);
-                Vector3 temp = toHalfPlaneSpace.MultiplyPoint(cProj);
-                Vector2 cTransformed = new Vector2(temp.y, temp.z).normalized;
+                Vector3 temp = toHalfPlaneSpace.MultiplyPoint(c);
+                Vector2 cTransformed = new Vector2(temp.y, temp.z);
                 List<HalfPlane2D> halfPlanesTransformed = new List<HalfPlane2D>();
 
-                
-                
                 foreach (HalfPlane bound in bounds)
                 {
                     Vector3 lineDir = Vector3.zero;
@@ -287,6 +274,11 @@ public class NavAgent : MonoBehaviour
                 if(LinearProgram2D(cTransformed, halfPlanesTransformed, ref vStar))
                 {
                     optimalHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
+                }
+                else
+                {
+                    //No solution??
+                    //Debug.Log("it happened");
                 }
             }
             bounds.Add(halfPlane);
