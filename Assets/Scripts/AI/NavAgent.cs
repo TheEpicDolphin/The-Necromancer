@@ -120,9 +120,10 @@ public class NavAgent : MonoBehaviour
                 Vector3 p = new Vector3(halfPlane2d.p.x, halfPlane2d.p.y, 0);
                 halfPlanes.Add(new HalfPlane(n, p));
             }
-            optimalHeading = LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, -1), halfPlanes);
-            
+            Vector3 temp = LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, -1), halfPlanes);
+            optimalHeading = new Vector2(temp.x, temp.y);
 
+            //return Mathf.Clamp(optimalHeading.magnitude, 0.0f, speed) * new Vector3(optimalHeading.x, 0.0f, optimalHeading.z).normalized;
             /*
             //There is no velocity that avoids obstacles. Find velocity that satisfies the weighted least squares
             //distances from each half plane
@@ -283,6 +284,7 @@ public class NavAgent : MonoBehaviour
             }
             bounds.Add(halfPlane);
         }
+        Debug.Log(optimalHeading);
         return optimalHeading;
     }
 
