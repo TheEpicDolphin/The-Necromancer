@@ -119,7 +119,7 @@ public class NavAgent : MonoBehaviour
                 Vector3 p = new Vector3(halfPlane2d.p.x, halfPlane2d.p.y, 0);
                 halfPlanes.Add(new HalfPlane(n, p));
             }
-            optimalHeading = LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, 1), halfPlanes);
+            optimalHeading = LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, -1), halfPlanes);
             
 
             /*
@@ -229,8 +229,9 @@ public class NavAgent : MonoBehaviour
 
         foreach (HalfPlane halfPlane in halfPlanes)
         {
-            if (Vector2.Dot(c, halfPlane.n) < 0)
+            if (Vector3.Dot(optimalHeading - halfPlane.p, halfPlane.n) < 0)
             {
+                
                 /*
                 Vector3 upRef = Vector3.up;
                 if(Vector3.Angle(upRef, halfPlane.n) <= Mathf.Epsilon)
@@ -257,19 +258,23 @@ public class NavAgent : MonoBehaviour
                 //Transpose is same as inverse for orthogonal matrix
                 Matrix4x4 fromHalfPlaneSpace = toHalfPlaneSpace.transpose;
 
-                Vector3 temp = toHalfPlaneSpace.MultiplyVector(c);
+                Vector3 cProj = Vector3.ProjectOnPlane(c, halfPlane.n);
+                Vector3 temp = toHalfPlaneSpace.MultiplyPoint(cProj);
                 Vector2 cTransformed = new Vector2(temp.y, temp.z).normalized;
                 List<HalfPlane2D> halfPlanesTransformed = new List<HalfPlane2D>();
+                
                 foreach (HalfPlane bound in bounds)
                 {
                     Vector3 lineDir = Vector3.zero;
                     Vector3 linePos = Vector3.zero;
+                    
                     if(HalfPlane.Intersection(halfPlane, bound, ref lineDir, ref linePos))
                     {
                         temp = toHalfPlaneSpace.MultiplyVector(lineDir);
                         Vector2 lineDirTransformed = new Vector2(temp.y, temp.z);
                         temp = toHalfPlaneSpace.MultiplyPoint(linePos);
                         Vector2 linePosTransformed = new Vector2(temp.y, temp.z);
+                        Debug.Log(temp);
                         halfPlanesTransformed.Add(new HalfPlane2D(Vector2.Perpendicular(lineDirTransformed), linePosTransformed));
                     }
                 }
