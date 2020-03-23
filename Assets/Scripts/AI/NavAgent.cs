@@ -201,6 +201,7 @@ public class NavAgent : MonoBehaviour
                 {
                     optimalHeading = Vector2.Distance(optimalInterval.p1, c) < Vector2.Distance(optimalInterval.p2, c) ? optimalInterval.p1 : optimalInterval.p2;
 
+                    
                     //Test perpendicular distance from desiredVelocity to optimalInterval
                     Vector2 n = Vector2.Perpendicular(optimalInterval.Dir);
                     float D = optimalInterval.Dir.x * n.y - optimalInterval.Dir.y * n.x;
@@ -212,6 +213,7 @@ public class NavAgent : MonoBehaviour
                     {
                         optimalHeading = potentialHeading;
                     }
+                    
                 }
                 else
                 {
@@ -233,17 +235,25 @@ public class NavAgent : MonoBehaviour
         {
             if (Vector3.Dot(optimalHeading - halfPlane.p, halfPlane.n) < 0)
             {
-                Vector3 i = Vector3.right;
-                Vector3 j = Vector3.up;
-                Vector3.OrthoNormalize(ref halfPlane.n, ref i, ref j);
+                //Vector3 i = Vector3.right;
+                //Vector3 j = Vector3.up;
+                //Vector3.OrthoNormalize(ref halfPlane.n, ref i, ref j);
+
+                Vector3 j = Vector3.ProjectOnPlane(Vector3.up, halfPlane.n).normalized;
+                if(j.magnitude <= Mathf.Epsilon)
+                {
+                    j = Vector3.ProjectOnPlane(Vector3.right, halfPlane.n).normalized;
+                }
+                Vector3 i = Vector3.Cross(j, halfPlane.n);
+                
 
                 // Copy the three new basis vectors into the rows of a matrix
                 // (since it is actually a 4x4 matrix, the bottom right corner
                 // should also be set to 1).
                 Matrix4x4 toHalfPlaneSpace = Matrix4x4.identity;
-                toHalfPlaneSpace.SetRow(0, halfPlane.n);
-                toHalfPlaneSpace.SetRow(1, i);
-                toHalfPlaneSpace.SetRow(2, j);
+                toHalfPlaneSpace.SetRow(0, i);
+                toHalfPlaneSpace.SetRow(1, j);
+                toHalfPlaneSpace.SetRow(2, halfPlane.n);
                 
                 Matrix4x4 translate = Matrix4x4.identity;
                 translate.SetColumn(3, -halfPlane.p);
@@ -254,7 +264,7 @@ public class NavAgent : MonoBehaviour
                 Matrix4x4 fromHalfPlaneSpace = toHalfPlaneSpace.inverse;
 
                 Vector3 temp = toHalfPlaneSpace.MultiplyPoint(c);
-                Vector2 cTransformed = new Vector2(temp.y, temp.z);
+                Vector2 cTransformed = new Vector2(temp.x, temp.y);
                 List<HalfPlane2D> halfPlanesTransformed = new List<HalfPlane2D>();
 
                 foreach (HalfPlane bound in bounds)
@@ -265,26 +275,36 @@ public class NavAgent : MonoBehaviour
                     if(HalfPlane.Intersection(halfPlane, bound, ref lineDir, ref linePos))
                     {
                         temp = toHalfPlaneSpace.MultiplyVector(lineDir);
-                        Vector2 lineDirTransformed = new Vector2(temp.y, temp.z);
+                        Vector2 lineDirTransformed = new Vector2(temp.x, temp.y);
                         temp = toHalfPlaneSpace.MultiplyPoint(linePos);
-                        Vector2 linePosTransformed = new Vector2(temp.y, temp.z);
-                        halfPlanesTransformed.Add(new HalfPlane2D(Vector2.Perpendicular(lineDirTransformed).normalized, linePosTransformed));
+                        Vector2 linePosTransformed = new Vector2(temp.x, temp.y);
+                        //Debug.Log(temp);
+                        halfPlanesTransformed.Add(new HalfPlane2D(-Vector2.Perpendicular(lineDirTransformed).normalized, linePosTransformed));
                     }
                 }
+
                 Vector2 vStar = Vector2.zero;
                 if(LinearProgram2D(cTransformed, halfPlanesTransformed, ref vStar))
                 {
                     optimalHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
+                    //Vector3 potentialHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
+                    //optimalHeading = Vector3.Distance(potentialHeading, c) < Vector3.Distance(optimalHeading, c) ? potentialHeading : optimalHeading;
                 }
                 else
                 {
-                    //No solution??
-                    //Debug.Log("it happened");
+                    //This should in principle not happen
                 }
             }
             bounds.Add(halfPlane);
         }
-        Debug.Log(optimalHeading);
+        //Debug.Log(optimalHeading);
+
+        /*
+        foreach(HalfPlane halfPlane in halfPlanes)
+        {
+            Debug.Log(Vector3.Dot(halfPlane.n, optimalHeading - halfPlane.p));
+        }
+        */
         return optimalHeading;
     }
 
@@ -332,7 +352,7 @@ public class NavAgent : MonoBehaviour
             n = vx_c.magnitude < Mathf.Epsilon ? -vCenter.normalized : vx_c.normalized;
         }
 
-        ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
+        ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u));
 
         //float d = Mathf.Min(Vector3.Distance(agentB.target.position, agentB.transform.position), 20.0f);
         //float f = d / 20.0f;
