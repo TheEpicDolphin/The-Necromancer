@@ -260,7 +260,7 @@ public class NavAgent : MonoBehaviour
                 }
 
                 Vector2 tempOptimalHeading = optimalHeading;
-                if (!LinearProgram2D(LARGE_FLOAT * halfPlanes[i].n, equidistantHalfPlanes, true, ref optimalHeading))
+                if (!LinearProgram2D(halfPlanes[i].n, equidistantHalfPlanes, true, ref optimalHeading))
                 {
                     //This should in principle not happen. But due to floating point errors, it may.
                     optimalHeading = tempOptimalHeading;
