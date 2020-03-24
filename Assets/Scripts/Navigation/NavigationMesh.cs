@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
-
+using VecUtils;
 
 public class HeapElement<TKey, TValue> where TKey : IComparable
 {
@@ -219,6 +219,23 @@ public class HalfPlane2D
         this.n = n;
         this.p = p;
         this.weight = weight;
+    }
+
+    public static bool Intersection(HalfPlane2D plane1, HalfPlane2D plane2, ref Vector2 intersectionPoint)
+    {
+        float determinant = VecMath.Det(plane1.n, plane2.n);
+        if(Mathf.Abs(determinant) > Mathf.Epsilon)
+        {
+            float Dx = Vector2.Dot(plane1.n, plane1.p) * plane2.n.y - plane1.n.y * Vector2.Dot(plane2.n, plane2.p);
+            float Dy = plane1.n.x * Vector2.Dot(plane2.n, plane2.p) - Vector2.Dot(plane1.n, plane1.p) * plane2.n.x;
+            intersectionPoint = new Vector2(Dx / determinant, Dy / determinant);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+        
     }
 }
 

@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
+using VecUtils;
 
 public class NavAgent : MonoBehaviour
 {
@@ -109,9 +109,12 @@ public class NavAgent : MonoBehaviour
         Vector2 desiredVelocity = new Vector2(desiredHeading.x, desiredHeading.z);
         Vector2 optimalHeading = desiredVelocity;
 
-        if (!LinearProgram2D(desiredVelocity, ORCAHalfPlanes, ref optimalHeading))
+        if (!LinearProgram2D(desiredVelocity, ORCAHalfPlanes, false, ref optimalHeading))
         {
-            
+
+            //LinearProgramDenselyPacked(ORCAHalfPlanes, ref optimalHeading);
+
+            /*
             //3d Linear programming approach to minimize maximum error
             List<HalfPlane> halfPlanes = new List<HalfPlane>();
             foreach (HalfPlane2D halfPlane2d in ORCAHalfPlanes)
@@ -120,11 +123,11 @@ public class NavAgent : MonoBehaviour
                 Vector3 p = new Vector3(halfPlane2d.p.x, halfPlane2d.p.y, 0);
                 halfPlanes.Add(new HalfPlane(n, p));
             }
-            Vector3 temp = LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, -1), halfPlanes);
-            optimalHeading = new Vector2(temp.x, temp.y);
+            //LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, -1), halfPlanes);
+            //optimalHeading = new Vector2(temp.x, temp.y);
+            */
 
-            //return Mathf.Clamp(optimalHeading.magnitude, 0.0f, speed) * new Vector3(optimalHeading.x, 0.0f, optimalHeading.z).normalized;
-            /*
+            
             //There is no velocity that avoids obstacles. Find velocity that satisfies the weighted least squares
             //distances from each half plane
             float[,] AT_A = new float[2, 2] { {0.0f, 0.0f },
@@ -153,8 +156,7 @@ public class NavAgent : MonoBehaviour
             float xVel = AT_A_inv[0, 0] * AT_b[0] + AT_A_inv[0, 1] * AT_b[1];
             float zVel = AT_A_inv[1, 0] * AT_b[0] + AT_A_inv[1, 1] * AT_b[1];
             optimalHeading = new Vector2(xVel, zVel);
-            optimalHeading = Mathf.Clamp(optimalHeading.magnitude, 0.0f, 10.0f) * optimalHeading.normalized;
-            */
+            
         }
 
         return Mathf.Clamp(optimalHeading.magnitude, 0.0f, speed) * new Vector3(optimalHeading.x, 0.0f, optimalHeading.y).normalized;
@@ -163,7 +165,7 @@ public class NavAgent : MonoBehaviour
     /*
      * Returns true if there is valid solution to 2d linear program. False otherwise.
      */
-    private bool LinearProgram2D(Vector2 c, List<HalfPlane2D> halfPlanes, ref Vector2 optimalHeading)
+    private bool LinearProgram2D(Vector2 c, List<HalfPlane2D> halfPlanes, bool optDirection, ref Vector2 optimalHeading)
     {
         optimalHeading = c;
         List<HalfPlane2D> bounds = new List<HalfPlane2D>();
@@ -176,10 +178,8 @@ public class NavAgent : MonoBehaviour
                 LineSegment optimalInterval = new LineSegment(halfPlane.p - LARGE_FLOAT * dir, halfPlane.p + LARGE_FLOAT * dir);
                 foreach (HalfPlane2D bound in bounds)
                 {
-                    float D = halfPlane.n.x * bound.n.y - halfPlane.n.y * bound.n.x;
-                    float Dx = Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.y - halfPlane.n.y * Vector2.Dot(bound.n, bound.p);
-                    float Dy = halfPlane.n.x * Vector2.Dot(bound.n, bound.p) - Vector2.Dot(halfPlane.n, halfPlane.p) * bound.n.x;
-                    Vector2 intersection = new Vector2(Dx / D, Dy / D);
+                    Vector2 intersection = Vector2.zero;
+                    HalfPlane2D.Intersection(halfPlane, bound, ref intersection);
 
                     if (Vector2.Dot(bound.n, dir) > 0)
                     {
@@ -226,6 +226,45 @@ public class NavAgent : MonoBehaviour
         return true;
     }
 
+    private void LinearProgramDenselyPacked(List<HalfPlane2D> halfPlanes, ref Vector2 optimalHeading)
+    {
+        for(int i = 0; i < halfPlanes.Count; i++)
+        {
+            if (Vector3.Dot(optimalHeading - halfPlanes[i].p, halfPlanes[i].n) < 0)
+            {
+                List<HalfPlane2D> equidistantHalfPlanes = new List<HalfPlane2D>();
+                Vector2 intersectionPoint = Vector2.zero;
+                for (int j = 0; j < i; j++)
+                {
+                    if (!HalfPlane2D.Intersection(halfPlanes[i], halfPlanes[j], ref intersectionPoint))
+                    {
+                        /* halfplane i and j are parallel. */
+                        if (Vector2.Dot(halfPlanes[i].n, halfPlanes[j].n) > 0.0f)
+                        {
+                            /* halfplane i and j face in the same direction. */
+                            continue;
+                        }
+                        else
+                        {
+                            /* halfplane i and halfplane j face in opposite directions. */
+                            intersectionPoint = 0.5f * (halfPlanes[i].p + halfPlanes[j].p);
+                        }
+                    }
+                    equidistantHalfPlanes.Add(new HalfPlane2D((halfPlanes[j].n - halfPlanes[i].n).normalized, intersectionPoint));
+                }
+
+                Vector2 tempOptimalHeading = optimalHeading;
+                if (!LinearProgram2D(LARGE_FLOAT * halfPlanes[i].n, equidistantHalfPlanes, true, ref optimalHeading))
+                {
+                    //This should in principle not happen. But due to floating point errors, it may.
+                    optimalHeading = tempOptimalHeading;
+                }
+            }
+        }
+
+    }
+
+    /*
     private Vector3 LinearProgram3D(Vector3 c, List<HalfPlane> halfPlanes)
     {
         Vector3 optimalHeading = c;
@@ -299,14 +338,15 @@ public class NavAgent : MonoBehaviour
         }
         //Debug.Log(optimalHeading);
 
-        /*
+        
         foreach(HalfPlane halfPlane in halfPlanes)
         {
             Debug.Log(Vector3.Dot(halfPlane.n, optimalHeading - halfPlane.p));
         }
-        */
+        
         return optimalHeading;
     }
+    */
 
 
     //Create Optimal reciprocal Collision Avoidance half plane
