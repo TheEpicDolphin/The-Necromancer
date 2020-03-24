@@ -112,7 +112,7 @@ public class NavAgent : MonoBehaviour
         if (!LinearProgram2D(desiredVelocity, ORCAHalfPlanes, false, ref optimalHeading))
         {
 
-            //LinearProgramDenselyPacked(ORCAHalfPlanes, ref optimalHeading);
+            LinearProgramDenselyPacked(ORCAHalfPlanes, ref optimalHeading);
 
             /*
             //3d Linear programming approach to minimize maximum error
@@ -123,11 +123,11 @@ public class NavAgent : MonoBehaviour
                 Vector3 p = new Vector3(halfPlane2d.p.x, halfPlane2d.p.y, 0);
                 halfPlanes.Add(new HalfPlane(n, p));
             }
-            //LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, -1), halfPlanes);
-            //optimalHeading = new Vector2(temp.x, temp.y);
+            Vector3 temp = LinearProgram3D(LARGE_FLOAT * new Vector3(0, 0, -1), halfPlanes);
+            optimalHeading = new Vector2(temp.x, temp.y);
             */
 
-            
+            /*
             //There is no velocity that avoids obstacles. Find velocity that satisfies the weighted least squares
             //distances from each half plane
             float[,] AT_A = new float[2, 2] { {0.0f, 0.0f },
@@ -156,7 +156,7 @@ public class NavAgent : MonoBehaviour
             float xVel = AT_A_inv[0, 0] * AT_b[0] + AT_A_inv[0, 1] * AT_b[1];
             float zVel = AT_A_inv[1, 0] * AT_b[0] + AT_A_inv[1, 1] * AT_b[1];
             optimalHeading = new Vector2(xVel, zVel);
-            
+            */
         }
 
         return Mathf.Clamp(optimalHeading.magnitude, 0.0f, speed) * new Vector3(optimalHeading.x, 0.0f, optimalHeading.y).normalized;
@@ -199,21 +199,27 @@ public class NavAgent : MonoBehaviour
 
                 if (Vector2.Dot(optimalInterval.Dir, dir) > 0)
                 {
-                    optimalHeading = Vector2.Distance(optimalInterval.p1, c) < Vector2.Distance(optimalInterval.p2, c) ? optimalInterval.p1 : optimalInterval.p2;
-
-                    
-                    //Test perpendicular distance from desiredVelocity to optimalInterval
-                    Vector2 n = Vector2.Perpendicular(optimalInterval.Dir);
-                    float D = optimalInterval.Dir.x * n.y - optimalInterval.Dir.y * n.x;
-                    float Dx = Vector2.Dot(optimalInterval.Dir, c) * n.y - optimalInterval.Dir.y * Vector2.Dot(n, optimalInterval.p1);
-                    float Dy = optimalInterval.Dir.x * Vector2.Dot(n, optimalInterval.p1) - Vector2.Dot(optimalInterval.Dir, c) * n.x;
-                    Vector2 potentialHeading = new Vector2(Dx / D, Dy / D);
-                    if (Vector2.Distance(potentialHeading, c) < Vector2.Distance(optimalHeading, c) &&
-                        Vector2.Dot(optimalInterval.p2 - potentialHeading, optimalInterval.p1 - potentialHeading) < 0)
+                    if (optDirection)
                     {
-                        optimalHeading = potentialHeading;
+                        
+                        optimalHeading = Vector2.Dot(optimalInterval.p1, c) > Vector2.Dot(optimalInterval.p2, c) ? optimalInterval.p1 : optimalInterval.p2;
                     }
-                    
+                    else
+                    {
+                        optimalHeading = Vector2.Distance(optimalInterval.p1, c) < Vector2.Distance(optimalInterval.p2, c) ? optimalInterval.p1 : optimalInterval.p2;
+
+                        //Test perpendicular distance from desiredVelocity to optimalInterval
+                        Vector2 n = Vector2.Perpendicular(optimalInterval.Dir);
+                        float D = optimalInterval.Dir.x * n.y - optimalInterval.Dir.y * n.x;
+                        float Dx = Vector2.Dot(optimalInterval.Dir, c) * n.y - optimalInterval.Dir.y * Vector2.Dot(n, optimalInterval.p1);
+                        float Dy = optimalInterval.Dir.x * Vector2.Dot(n, optimalInterval.p1) - Vector2.Dot(optimalInterval.Dir, c) * n.x;
+                        Vector2 potentialHeading = new Vector2(Dx / D, Dy / D);
+                        if (Vector2.Distance(potentialHeading, c) < Vector2.Distance(optimalHeading, c) &&
+                            Vector2.Dot(optimalInterval.p2 - potentialHeading, optimalInterval.p1 - potentialHeading) < 0)
+                        {
+                            optimalHeading = potentialHeading;
+                        }
+                    }
                 }
                 else
                 {
@@ -259,12 +265,18 @@ public class NavAgent : MonoBehaviour
                     //This should in principle not happen. But due to floating point errors, it may.
                     optimalHeading = tempOptimalHeading;
                 }
+
+                /*
+                foreach (HalfPlane2D hp in equidistantHalfPlanes)
+                {
+                    Debug.Log(Vector3.Dot(hp.n, optimalHeading - hp.p));
+                }
+                */
             }
         }
-
     }
 
-    /*
+    
     private Vector3 LinearProgram3D(Vector3 c, List<HalfPlane> halfPlanes)
     {
         Vector3 optimalHeading = c;
@@ -323,7 +335,8 @@ public class NavAgent : MonoBehaviour
                 }
 
                 Vector2 vStar = Vector2.zero;
-                if(LinearProgram2D(cTransformed, halfPlanesTransformed, ref vStar))
+                Vector2 tempOptimalHeading = optimalHeading;
+                if (LinearProgram2D(cTransformed, halfPlanesTransformed, false, ref vStar))
                 {
                     optimalHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
                     //Vector3 potentialHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
@@ -332,21 +345,22 @@ public class NavAgent : MonoBehaviour
                 else
                 {
                     //This should in principle not happen
+                    optimalHeading = tempOptimalHeading;
                 }
             }
             bounds.Add(halfPlane);
         }
-        //Debug.Log(optimalHeading);
 
-        
+        /*
         foreach(HalfPlane halfPlane in halfPlanes)
         {
             Debug.Log(Vector3.Dot(halfPlane.n, optimalHeading - halfPlane.p));
         }
-        
+        */
+
         return optimalHeading;
     }
-    */
+    
 
 
     //Create Optimal reciprocal Collision Avoidance half plane
