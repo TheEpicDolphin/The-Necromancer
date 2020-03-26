@@ -17,7 +17,9 @@ public class PlayerMovementController : MonoBehaviour
 
     float playerSpeed = 15.0f;
     Magic equipedMagic;
-    public Sword sword;
+
+    public Firearm firearm;
+    //public Sword sword;
 
     float moveHorizontal;
     float moveVertical;
@@ -25,14 +27,15 @@ public class PlayerMovementController : MonoBehaviour
 
     Animator animator;
     Rigidbody rb;
-    Resurrector resurrector;
 
+    public Inventory inventory;
+
+    Transform hand;
 
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        resurrector = transform.Find("Resurrector").gameObject.GetComponent<Resurrector>();
 
         GameObject sprite = transform.Find("sprite").gameObject;
         animator = sprite.GetComponent<Animator>();
@@ -45,12 +48,18 @@ public class PlayerMovementController : MonoBehaviour
         transform.up = Camera.main.transform.up;
 
         //Attach sword to hand
-        Transform hand = transform.Find("Hand");
-        sword.transform.parent = hand;
-        sword.transform.localPosition = Vector3.zero;
-        sword.transform.localRotation = Quaternion.identity;
+        hand = transform.Find("Hand");
+        firearm.transform.parent = hand;
+        firearm.transform.localPosition = Vector3.zero;
+        firearm.transform.localRotation = Quaternion.identity;
 
-        
+        inventory.handgunAmmo = 200;
+
+        //sword.transform.parent = hand;
+        //sword.transform.localPosition = Vector3.zero;
+        //sword.transform.localRotation = Quaternion.identity;
+
+
     }
 
     // Update is called once per frame
@@ -58,13 +67,32 @@ public class PlayerMovementController : MonoBehaviour
     {
         moveHorizontal = Input.GetAxisRaw("Horizontal");
         moveVertical = Input.GetAxisRaw("Vertical");
-        relMousePos = Input.mousePosition - Camera.main.WorldToScreenPoint(transform.position);
-        relMousePos = new Vector3(relMousePos.x, relMousePos.y, 0.0f).normalized;
+
+        if (Input.GetMouseButton(1))
+        {
+            //hand.GetChild().GetComponent<MeshRenderer>().enabled = Input.GetMouseButton(1);
+            hand.RotateAround(new Vector3(transform.position.x, 1.0f, transform.position.z), hand.right, -2.0f * Input.GetAxis("Mouse Y"));
+        }
+        else
+        {
+            relMousePos = Input.mousePosition - Camera.main.WorldToScreenPoint(transform.position);
+            relMousePos = new Vector3(relMousePos.x, relMousePos.y, 0.0f).normalized;
+
+            //Move hand around body
+            Vector3 relHandDir = new Vector3(relMousePos.x, 0.0f, relMousePos.y);
+            hand.position = new Vector3(transform.position.x, 1.0f, transform.position.z) + 2.0f * relHandDir;
+            hand.rotation = Quaternion.LookRotation(relHandDir, Vector3.up);
+        }
+        
+        //Debug.DrawRay(hand.transform.position, hand.transform.up, Color.red);
 
         if (Input.GetMouseButton(0))
         {
-            equipedMagic.Cast();
+            //equipedMagic.Cast();
+            firearm.Shoot(animator, ref inventory, hand.position, hand.forward);
         }
+
+        
 
     }
 

@@ -37,7 +37,7 @@ public class MeleeAIEnemy : NavAgent
         transform.up = Camera.main.transform.up;
 
         nextAttackTime = Time.time;
-        speed = 12.0f;
+        maxSpeed = 12.0f;
         state = AIState.Attacking;
         healthBar = transform.Find("HealthBarCanvas").gameObject.GetComponent<HealthBar>();
         nearbyAlliesCoroutine = StartCoroutine(UpdateNearbyAllies());
@@ -64,37 +64,42 @@ public class MeleeAIEnemy : NavAgent
         }
     }
 
+    private void FixedUpdate()
+    {
+        MoveAgent();
+    }
+
     public bool IsDead()
     {
         return state == AIState.Dead;
     }
 
-    public override void MoveAgent(Vector3 heading)
+    public override void MoveAgent()
     {
         if (!overrideNav)
         {
-            Vector3 curPos = new Vector3(transform.position.x, 0.1f, transform.position.z);
-            rb.MovePosition(curPos + heading * Time.deltaTime);
+            Vector3 curPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
+            //rb.MovePosition(curPos + optimalVelocity * Time.fixedDeltaTime);
+            rb.velocity = optimalVelocity;
             //Smooth movement
             if (pathPoints.Count == 1)
             {
-                desiredHeading = heading;
-                Vector3.SmoothDamp(transform.position, pathPoints[0], ref desiredHeading, 0.3f, speed);
+                desiredHeading = optimalVelocity;
+                Vector3.SmoothDamp(transform.position, pathPoints[0], ref desiredHeading, 0.3f, maxSpeed);
             }
             else
             {
-                desiredHeading = Vector3.Lerp(heading, speed * (pathPoints[0] - curPos).normalized, 5.0f * Time.deltaTime);
+                //desiredHeading = Vector3.Lerp(optimalVelocity, maxSpeed * (pathPoints[0] - curPos).normalized, 5.0f * Time.fixedDeltaTime);
+                desiredHeading = optimalVelocity;
             }
-
-            
             Debug.DrawLine(curPos, curPos + desiredHeading, Color.cyan);
         }
         else
         {
             desiredHeading = rb.velocity;
         }
-        
-        
+
+
     }
 
     private void OnDestroy()

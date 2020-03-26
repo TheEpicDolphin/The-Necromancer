@@ -10,84 +10,104 @@ public class NavAgent : MonoBehaviour
     public int targetNavMeshTriIdx;
     public Transform target;
     public float radius;
-    public string id;
-    protected float speed = 5.0f;
+    protected float maxSpeed = 5.0f;
     private List<HalfPlane2D> ORCAHalfPlanes;
     List<NavAgent> nearbyNavAgents = new List<NavAgent>();
-    public Vector3 desiredHeading;
-    protected Vector3 tempPreferredHeading;
+    public Vector3 desiredHeading = Vector3.zero;
+    protected Vector3 optimalVelocity = Vector3.zero;
 
     protected Rigidbody rb;
     protected bool overrideNav = false;
     int avoidanceLayer = 3;
 
-    const float LARGE_FLOAT = 10000.0f;
+    const float LARGE_FLOAT = 100000.0f;
     const float tau = 1.5f;
-    float nearbyObstacleRadius; 
+    float nearbyObstacleRadius;
+
+    Coroutine updateNavCoroutine;
 
 
     // Start is called before the first frame update
     protected void Start()
     {
-        tempPreferredHeading = speed * (target.position - transform.position).normalized;
-        desiredHeading = tempPreferredHeading;
         pathPoints = new List<Vector3>();
         rb = GetComponent<Rigidbody>();
-        nearbyObstacleRadius = 2 * speed * tau;
-
+        nearbyObstacleRadius = 2 * maxSpeed * tau;
+        updateNavCoroutine = StartCoroutine(UpdateNav());
     }
 
-    private void Update()
-    {
-        if (target)
-        {
-            Vector3 agentStartPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
-            Vector3 targetPosition = new Vector3(target.position.x, 0.0f, target.position.z);
-            int targetTriIdx = NavigationMesh.Instance.NavMeshTriFromPos(targetPosition);
-            if (targetTriIdx >= 0)
-            {
-                targetNavMeshTriIdx = targetTriIdx;
-            }
 
-            int agentTriIdx = NavigationMesh.Instance.NavMeshTriFromPos(agentStartPos);
-            if (agentTriIdx >= 0)
+
+    IEnumerator UpdateNav()
+    {
+        while (true)
+        {
+            if (target)
             {
-                navMeshTriIdx = agentTriIdx;
-                pathPoints = NavigationMesh.Instance.GetShortestPath(navMeshTriIdx, targetNavMeshTriIdx, agentStartPos, targetPosition, radius);
+                Vector3 agentStartPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
+                Vector3 targetPosition = new Vector3(target.position.x, 0.0f, target.position.z);
+                int targetTriIdx = NavigationMesh.Instance.NavMeshTriFromPos(targetPosition);
+                if (targetTriIdx >= 0)
+                {
+                    targetNavMeshTriIdx = targetTriIdx;
+                }
+
+                int agentTriIdx = NavigationMesh.Instance.NavMeshTriFromPos(agentStartPos);
+                if (agentTriIdx >= 0)
+                {
+                    navMeshTriIdx = agentTriIdx;
+                    pathPoints = NavigationMesh.Instance.GetShortestPath(navMeshTriIdx, targetNavMeshTriIdx, agentStartPos, targetPosition, radius);
+                }
+                else
+                {
+                    //AI agent is out of bounds. Make it head towards last navigation mesh triangle
+                    pathPoints = new List<Vector3>() { NavigationMesh.Instance.GetTriPosition(navMeshTriIdx) };
+                }
+
+                ORCAHalfPlanes = new List<HalfPlane2D>();
+                UpdateNearbyNavAgents();
+
+                //Construct obstacle avoidance planes
+                //Player2AgentORCA(AIManager.Instance.playerAgent);
+                foreach (NavAgent agentB in nearbyNavAgents)
+                {
+                    AgentORCA(agentB);
+                }
+
+                optimalVelocity = GetOptimalHeading();
             }
             else
             {
-                //AI agent is out of bounds. Make it head towards last navigation mesh triangle
-                pathPoints = new List<Vector3>() { NavigationMesh.Instance.GetTriPosition(navMeshTriIdx) };
+                //TODO: what if there is no target
             }
 
-            ORCAHalfPlanes = new List<HalfPlane2D>();
-            UpdateNearbyNavAgents();
-
-            //Construct obstacle avoidance planes
-            //Player2AgentORCA(AIManager.Instance.playerAgent);
-            foreach (NavAgent agentB in nearbyNavAgents)
-            {
-                AgentORCA(agentB);
-            }
-
-            Vector3 optimalHeading = GetOptimalHeading();
-            MoveAgent(optimalHeading);
-        }
-        else
-        {
-
+            yield return new WaitForSeconds(0.1f);
         }
     }
 
     private void LateUpdate()
     {
-        desiredHeading = tempPreferredHeading;
+
+        /*
+        float d = Vector3.Distance(transform.position, target.position);
+        if (d < radius)
+        {
+            avoidanceLayer = 0;
+        }
+        else if (d < 3 * radius)
+        {
+            avoidanceLayer = 1;
+        }
+        else
+        {
+            avoidanceLayer = 2;
+        }
+        */
     }
 
-    public virtual void MoveAgent(Vector3 heading)
+    public virtual void MoveAgent()
     {
-
+        
     }
 
     protected void UpdateNearbyNavAgents()
@@ -109,9 +129,10 @@ public class NavAgent : MonoBehaviour
         Vector2 desiredVelocity = new Vector2(desiredHeading.x, desiredHeading.z);
         Vector2 optimalHeading = desiredVelocity;
 
-        if (!LinearProgram2D(desiredVelocity, ORCAHalfPlanes, false, ref optimalHeading))
+        if (!LinearProgram2D(desiredVelocity, ORCAHalfPlanes, false, maxSpeed, ref optimalHeading))
         {
-
+            optimalHeading = desiredVelocity;
+            //optimalHeading = Vector2.zero;
             LinearProgramDenselyPacked(ORCAHalfPlanes, ref optimalHeading);
 
             /*
@@ -156,74 +177,129 @@ public class NavAgent : MonoBehaviour
             float xVel = AT_A_inv[0, 0] * AT_b[0] + AT_A_inv[0, 1] * AT_b[1];
             float zVel = AT_A_inv[1, 0] * AT_b[0] + AT_A_inv[1, 1] * AT_b[1];
             optimalHeading = new Vector2(xVel, zVel);
+            optimalHeading = Mathf.Clamp(optimalHeading.magnitude, 0.0f, maxSpeed) * optimalHeading.normalized;
             */
         }
 
-        return Mathf.Clamp(optimalHeading.magnitude, 0.0f, speed) * new Vector3(optimalHeading.x, 0.0f, optimalHeading.y).normalized;
+        return new Vector3(optimalHeading.x, 0.0f, optimalHeading.y);
+    }
+
+    private bool LinearProgram1D(Vector2 c, HalfPlane2D halfplane, List<HalfPlane2D> bounds, bool optDirection, float velRadius, ref Vector2 optimalHeading)
+    {
+        Vector2 dir = -Vector2.Perpendicular(halfplane.n);
+        float t0 = Vector2.Dot(dir, halfplane.p);
+        float d0 = Vector2.Dot(halfplane.n, halfplane.p);
+        float Tmag = velRadius * velRadius - d0 * d0;
+
+        if(Tmag < 0.0f)
+        {
+            //No velocity on the line satisfies the radius constraint
+            return false;
+        }
+
+        float T = Mathf.Sqrt(Tmag);
+        float tLeft = -t0 - T;
+        float tRight = -t0 + T;
+
+        foreach(HalfPlane2D bound in bounds)
+        {
+            Vector2 boundDir = -Vector2.Perpendicular(bound.n);
+            float denominator = Vector2.Dot(halfplane.n, boundDir);
+            float numerator = Vector2.Dot(bound.n, halfplane.p - bound.p);
+
+            if (Mathf.Abs(denominator) <= Mathf.Epsilon)
+            {
+                /* Lines lineNo and i are (almost) parallel. */
+                if (numerator < 0.0f)
+                {
+                    return false;
+                }
+
+                continue;
+            }
+            
+            float t = numerator / denominator;
+
+            if (denominator >= 0.0f)
+            {
+                /* Line i bounds line lineNo on the right. */
+                tRight = Mathf.Min(tRight, t);
+            }
+            else
+            {
+                /* Line i bounds line lineNo on the left. */
+                tLeft = Mathf.Max(tLeft, t);
+            }
+
+            if (tLeft > tRight)
+            {
+                return false;
+            }
+        }
+
+        if (optDirection)
+        {
+            /* Optimize direction. */
+            if (Vector2.Dot(c, dir) > 0.0f)
+            {
+                /* Take right extreme. */
+                optimalHeading = halfplane.p + tRight * dir;
+            }
+            else
+            {
+                /* Take left extreme. */
+                optimalHeading = halfplane.p + tLeft * dir;
+            }
+        }
+        else
+        {
+            /* Optimize closest point. */
+            float t = Vector2.Dot(dir, (c - halfplane.p));
+
+            if (t < tLeft)
+            {
+                optimalHeading = halfplane.p + tLeft * dir;
+            }
+            else if (t > tRight)
+            {
+                optimalHeading = halfplane.p + tRight * dir;
+            }
+            else
+            {
+                optimalHeading = halfplane.p + t * dir;
+            }
+        }
+
+        return true;
+
     }
 
     /*
      * Returns true if there is valid solution to 2d linear program. False otherwise.
      */
-    private bool LinearProgram2D(Vector2 c, List<HalfPlane2D> halfPlanes, bool optDirection, ref Vector2 optimalHeading)
+    private bool LinearProgram2D(Vector2 c, List<HalfPlane2D> halfPlanes, bool optDirection, float velRadius, ref Vector2 optimalHeading)
     {
-        optimalHeading = c;
+        if (optDirection)
+        {
+            optimalHeading = velRadius * c.normalized;
+        }
+        else
+        {
+            //Clamp to velocity radius
+            optimalHeading = Mathf.Clamp(c.magnitude, 0.0f, velRadius) * c.normalized;
+        }
+        
         List<HalfPlane2D> bounds = new List<HalfPlane2D>();
 
         foreach (HalfPlane2D halfPlane in halfPlanes)
         {
             if (Vector2.Dot(optimalHeading - halfPlane.p, halfPlane.n) < 0)
             {
-                Vector2 dir = Vector2.Perpendicular(halfPlane.n);
-                LineSegment optimalInterval = new LineSegment(halfPlane.p - LARGE_FLOAT * dir, halfPlane.p + LARGE_FLOAT * dir);
-                foreach (HalfPlane2D bound in bounds)
+                // Result does not satisfy constraint i. Compute new optimal result.
+                Vector2 tempOptimalHeading = optimalHeading;
+                if (!LinearProgram1D(c, halfPlane, bounds, optDirection, velRadius, ref optimalHeading))
                 {
-                    Vector2 intersection = Vector2.zero;
-                    HalfPlane2D.Intersection(halfPlane, bound, ref intersection);
-
-                    if (Vector2.Dot(bound.n, dir) > 0)
-                    {
-                        if (Vector2.Dot(intersection - optimalInterval.p1, dir) > 0)
-                        {
-                            optimalInterval.p1 = intersection;
-                        }
-                    }
-                    else
-                    {
-                        if (Vector2.Dot(intersection - optimalInterval.p2, -dir) > 0)
-                        {
-                            optimalInterval.p2 = intersection;
-                        }
-                    }
-                }
-
-                if (Vector2.Dot(optimalInterval.Dir, dir) > 0)
-                {
-                    if (optDirection)
-                    {
-                        
-                        optimalHeading = Vector2.Dot(optimalInterval.p1, c) > Vector2.Dot(optimalInterval.p2, c) ? optimalInterval.p1 : optimalInterval.p2;
-                    }
-                    else
-                    {
-                        optimalHeading = Vector2.Distance(optimalInterval.p1, c) < Vector2.Distance(optimalInterval.p2, c) ? optimalInterval.p1 : optimalInterval.p2;
-
-                        //Test perpendicular distance from desiredVelocity to optimalInterval
-                        Vector2 n = Vector2.Perpendicular(optimalInterval.Dir);
-                        float D = optimalInterval.Dir.x * n.y - optimalInterval.Dir.y * n.x;
-                        float Dx = Vector2.Dot(optimalInterval.Dir, c) * n.y - optimalInterval.Dir.y * Vector2.Dot(n, optimalInterval.p1);
-                        float Dy = optimalInterval.Dir.x * Vector2.Dot(n, optimalInterval.p1) - Vector2.Dot(optimalInterval.Dir, c) * n.x;
-                        Vector2 potentialHeading = new Vector2(Dx / D, Dy / D);
-                        if (Vector2.Distance(potentialHeading, c) < Vector2.Distance(optimalHeading, c) &&
-                            Vector2.Dot(optimalInterval.p2 - potentialHeading, optimalInterval.p1 - potentialHeading) < 0)
-                        {
-                            optimalHeading = potentialHeading;
-                        }
-                    }
-                }
-                else
-                {
-                    //No solution
+                    optimalHeading = tempOptimalHeading;
                     return false;
                 }
             }
@@ -256,27 +332,42 @@ public class NavAgent : MonoBehaviour
                             intersectionPoint = 0.5f * (halfPlanes[i].p + halfPlanes[j].p);
                         }
                     }
-                    equidistantHalfPlanes.Add(new HalfPlane2D((halfPlanes[j].n - halfPlanes[i].n).normalized, intersectionPoint));
+                    Vector2 v1 = -Vector2.Perpendicular(halfPlanes[i].n);
+                    Vector2 v2 = -Vector2.Perpendicular(halfPlanes[j].n);
+                    equidistantHalfPlanes.Add(new HalfPlane2D(Vector2.Perpendicular(v2 - v1).normalized, intersectionPoint));
                 }
 
                 Vector2 tempOptimalHeading = optimalHeading;
-                if (!LinearProgram2D(halfPlanes[i].n, equidistantHalfPlanes, true, ref optimalHeading))
+                if (!LinearProgram2D(halfPlanes[i].n, equidistantHalfPlanes, true, maxSpeed, ref optimalHeading))
                 {
                     //This should in principle not happen. But due to floating point errors, it may.
                     optimalHeading = tempOptimalHeading;
                 }
 
                 /*
-                foreach (HalfPlane2D hp in equidistantHalfPlanes)
+                float minMax = float.NegativeInfinity;
+                foreach (HalfPlane2D hp in halfPlanes)
                 {
-                    Debug.Log(Vector3.Dot(hp.n, optimalHeading - hp.p));
+                    minMax = Mathf.Max(minMax, -Vector2.Dot(hp.n, optimalHeading - hp.p));
                 }
+                Debug.Log(minMax);
+                Debug.Log(optimalHeading);
                 */
             }
         }
+
+        /*
+        float minMax = float.NegativeInfinity;
+        foreach (HalfPlane2D hp in halfPlanes)
+        {
+            minMax = Mathf.Max(minMax, -Vector2.Dot(hp.n, optimalHeading - hp.p));
+            Debug.Log(-Vector2.Dot(hp.n, optimalHeading - hp.p));
+        }
+        //Debug.Log(minMax);
+        */
     }
 
-    
+    /*
     private Vector3 LinearProgram3D(Vector3 c, List<HalfPlane> halfPlanes)
     {
         Vector3 optimalHeading = c;
@@ -329,14 +420,13 @@ public class NavAgent : MonoBehaviour
                         Vector2 lineDirTransformed = new Vector2(temp.x, temp.y);
                         temp = toHalfPlaneSpace.MultiplyPoint(linePos);
                         Vector2 linePosTransformed = new Vector2(temp.x, temp.y);
-                        //Debug.Log(temp);
                         halfPlanesTransformed.Add(new HalfPlane2D(-Vector2.Perpendicular(lineDirTransformed).normalized, linePosTransformed));
                     }
                 }
 
                 Vector2 vStar = Vector2.zero;
                 Vector2 tempOptimalHeading = optimalHeading;
-                if (LinearProgram2D(cTransformed, halfPlanesTransformed, false, ref vStar))
+                if (LinearProgram2D(cTransformed, halfPlanesTransformed, false, maxSpeed, ref vStar))
                 {
                     optimalHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
                     //Vector3 potentialHeading = fromHalfPlaneSpace.MultiplyPoint(vStar);
@@ -351,16 +441,9 @@ public class NavAgent : MonoBehaviour
             bounds.Add(halfPlane);
         }
 
-        /*
-        foreach(HalfPlane halfPlane in halfPlanes)
-        {
-            Debug.Log(Vector3.Dot(halfPlane.n, optimalHeading - halfPlane.p));
-        }
-        */
-
         return optimalHeading;
     }
-    
+    */
 
 
     //Create Optimal reciprocal Collision Avoidance half plane
@@ -408,21 +491,6 @@ public class NavAgent : MonoBehaviour
 
         ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u));
 
-        //float d = Mathf.Min(Vector3.Distance(agentB.target.position, agentB.transform.position), 20.0f);
-        //float f = d / 20.0f;
-        //ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, Mathf.Pow(f, 10)));
-
-        /*
-        if(vCenter.magnitude < 1.5f * r)
-        {
-            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, 0.01f * vCenter.magnitude));
-        }
-        else
-        {
-            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.5f * u, vCenter.magnitude));
-        }
-        */
-
 
         /*
         if (avoidanceLayer == agentB.avoidanceLayer)
@@ -431,7 +499,7 @@ public class NavAgent : MonoBehaviour
         }
         else if (avoidanceLayer < agentB.avoidanceLayer)
         {
-            //ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.0f * u, vCenter.magnitude));
+            ORCAHalfPlanes.Add(new HalfPlane2D(n, vOptA + 0.0f * u, vCenter.magnitude));
         }
         else if (avoidanceLayer > agentB.avoidanceLayer)
         {

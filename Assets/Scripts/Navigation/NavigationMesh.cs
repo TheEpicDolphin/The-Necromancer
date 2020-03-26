@@ -487,6 +487,9 @@ public class NavigationMesh : MonoBehaviour
         {
             _instance = this;
         }
+
+        mesh = GetComponent<MeshFilter>().mesh;
+        navMeshGraph = NavMeshToGraph();
     }
 
     const float LARGE_FLOAT = 10000.0f;
@@ -507,18 +510,7 @@ public class NavigationMesh : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        mesh = GetComponent<MeshFilter>().mesh;
-        navMeshGraph = NavMeshToGraph();
 
-        /*
-        HalfPlane hp1 = new HalfPlane(new Vector3(1,1,1).normalized, new Vector3(0, 0, 0));
-        HalfPlane hp2 = new HalfPlane(new Vector3(1,-1,-2).normalized, new Vector3(0, 1, 0));
-        Vector3 lineDir = Vector3.zero;
-        Vector3 linePos = Vector3.zero;
-        HalfPlane.Intersection(hp1, hp2, ref lineDir, ref linePos);
-        Debug.Log(Vector3.Dot(hp1.n, linePos - hp1.p));
-        Debug.Log(Vector3.Dot(hp2.n, linePos - hp2.p));
-        */
     }
 
     public int NavMeshTriFromPos(Vector3 pos)

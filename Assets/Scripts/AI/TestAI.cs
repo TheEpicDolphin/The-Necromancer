@@ -7,39 +7,39 @@ public class TestAI : NavAgent
     // Start is called before the first frame update
     new void Start()
     {
-        base.Start();
-
         Vector3 meshExtents = GetComponent<MeshRenderer>().bounds.extents;
         radius = meshExtents.x;
+        base.Start();
     }
 
-    public override void MoveAgent(Vector3 heading)
+    private void FixedUpdate()
+    {
+        MoveAgent();
+    }
+
+    public override void MoveAgent()
     {
         if (!overrideNav)
         {
-            Vector3 curPos = new Vector3(transform.position.x, 0.1f, transform.position.z);
-
-            rb.MovePosition(curPos + heading * Time.deltaTime);
-            //rb.AddForce(heading * Time.deltaTime);
-
+            Vector3 curPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
+            rb.velocity = optimalVelocity;
+            //rb.MovePosition(curPos + optimalVelocity * Time.fixedDeltaTime);
             //Smooth movement
             if (pathPoints.Count == 1)
             {
-                tempPreferredHeading = heading;
-                Vector3.SmoothDamp(transform.position, pathPoints[0], ref tempPreferredHeading, 0.3f, speed);
+                desiredHeading = optimalVelocity;
+                Vector3.SmoothDamp(transform.position, pathPoints[0], ref desiredHeading, 0.3f, maxSpeed);
             }
             else
             {
-                tempPreferredHeading = Vector3.Lerp(heading, speed * (pathPoints[0] - curPos).normalized, 5.0f * Time.deltaTime);
-                //desiredHeading = speed * (pathPoints[0] - curPos).normalized;
+                //desiredHeading = Vector3.Lerp(optimalVelocity, maxSpeed * (pathPoints[0] - curPos).normalized, 5.0f * Time.fixedDeltaTime);
+                desiredHeading = optimalVelocity;
             }
-
-
-            Debug.DrawLine(curPos, curPos + tempPreferredHeading, Color.cyan);
+            Debug.DrawLine(curPos, curPos + desiredHeading, Color.cyan);
         }
         else
         {
-            tempPreferredHeading = rb.velocity;
+            desiredHeading = rb.velocity;
         }
 
 
