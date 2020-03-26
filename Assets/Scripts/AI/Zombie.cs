@@ -2,18 +2,42 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class TestAI : NavAgent
+public class Zombie : NavAgent
 {
+    HealthBar healthBar;
+    Animator animator;
+
     // Start is called before the first frame update
     new void Start()
     {
-        Vector3 meshExtents = GetComponent<MeshRenderer>().bounds.extents;
-        radius = meshExtents.x;
         base.Start();
+        animator = GetComponentInChildren<Animator>();
+
+        Vector3 spriteBounds = transform.GetChild(0).gameObject.GetComponent<SpriteRenderer>().bounds.size;
+        radius = spriteBounds.x / 3;
+        transform.forward = -Camera.main.transform.forward;
+        transform.up = Camera.main.transform.up;
+
+        maxSpeed = 12.0f;
+        healthBar = transform.Find("HealthBarCanvas").gameObject.GetComponent<HealthBar>();
+
     }
 
     private void FixedUpdate()
     {
+        Vector3 targetLoc = pathPoints[0];
+        Vector3 faceDir = (targetLoc - transform.position).normalized;
+
+        animator.SetFloat("movement", rb.velocity.magnitude);
+        animator.SetFloat("facingY", faceDir.z);
+        animator.SetFloat("facingX", faceDir.x);
+
+        if(rb.velocity.magnitude > 0.01f)
+        {
+            animator.SetFloat("dy", rb.velocity.z);
+            animator.SetFloat("dx", rb.velocity.x);
+        }
+
         MoveAgent();
     }
 
@@ -24,7 +48,7 @@ public class TestAI : NavAgent
             Vector3 curPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
             //rb.MovePosition(curPos + optimalVelocity * Time.fixedDeltaTime);
             rb.velocity = optimalVelocity;
-            
+
             //Smooth movement
             if (pathPoints.Count == 1)
             {

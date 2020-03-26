@@ -63,30 +63,29 @@ public class NavAgent : MonoBehaviour
                     //AI agent is out of bounds. Make it head towards last navigation mesh triangle
                     pathPoints = new List<Vector3>() { NavigationMesh.Instance.GetTriPosition(navMeshTriIdx) };
                 }
-
-                ORCAHalfPlanes = new List<HalfPlane2D>();
-                UpdateNearbyNavAgents();
-
-                //Construct obstacle avoidance planes
-                //Player2AgentORCA(AIManager.Instance.playerAgent);
-                foreach (NavAgent agentB in nearbyNavAgents)
-                {
-                    AgentORCA(agentB);
-                }
-
-                optimalVelocity = GetOptimalHeading();
             }
             else
             {
                 //TODO: what if there is no target
             }
 
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.15f);
         }
     }
 
     private void LateUpdate()
     {
+        ORCAHalfPlanes = new List<HalfPlane2D>();
+        UpdateNearbyNavAgents();
+
+        //Construct obstacle avoidance planes
+        //Player2AgentORCA(AIManager.Instance.playerAgent);
+        foreach (NavAgent agentB in nearbyNavAgents)
+        {
+            AgentORCA(agentB);
+        }
+
+        optimalVelocity = GetOptimalHeading();
 
         /*
         float d = Vector3.Distance(transform.position, target.position);

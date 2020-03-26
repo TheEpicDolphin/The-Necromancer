@@ -81,6 +81,7 @@ public class MeleeAIEnemy : NavAgent
             Vector3 curPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
             //rb.MovePosition(curPos + optimalVelocity * Time.fixedDeltaTime);
             rb.velocity = optimalVelocity;
+
             //Smooth movement
             if (pathPoints.Count == 1)
             {
@@ -89,8 +90,8 @@ public class MeleeAIEnemy : NavAgent
             }
             else
             {
-                //desiredHeading = Vector3.Lerp(optimalVelocity, maxSpeed * (pathPoints[0] - curPos).normalized, 5.0f * Time.fixedDeltaTime);
-                desiredHeading = optimalVelocity;
+                desiredHeading = Vector3.Lerp(optimalVelocity, maxSpeed * (pathPoints[0] - curPos).normalized, 5.0f * Time.fixedDeltaTime);
+                //desiredHeading = optimalVelocity;
             }
             Debug.DrawLine(curPos, curPos + desiredHeading, Color.cyan);
         }

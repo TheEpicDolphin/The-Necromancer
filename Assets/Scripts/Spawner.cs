@@ -19,10 +19,9 @@ public class Spawner : MonoBehaviour
         if (Time.time > nextSpawnTime)
         {
             nextSpawnTime = Time.time + coolDown;
-            MeleeAIEnemy enemyAI = (MeleeAIEnemy)Instantiate(Resources.Load("Prefabs/Enemy", typeof(MeleeAIEnemy)));
-            enemyAI.transform.position = transform.position;
-            enemyAI.target = AIManager.Instance.playerAgent.transform;
-            enemyAI.playerTrans = AIManager.Instance.playerAgent.transform;
+            Zombie zombieAI = (Zombie)Instantiate(Resources.Load("Prefabs/Zombie", typeof(Zombie)));
+            zombieAI.transform.position = transform.position;
+            zombieAI.target = AIManager.Instance.playerAgent.transform;
         }
         
     }

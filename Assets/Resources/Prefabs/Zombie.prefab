@@ -10,8 +10,9 @@ GameObject:
   m_Component:
   - component: {fileID: 2588993259836650489}
   - component: {fileID: 2588993259836650486}
+  - component: {fileID: 8041314450186216762}
   m_Layer: 9
-  m_Name: goomba
+  m_Name: sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -25,7 +26,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2588993259836650488}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 2.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 2588993261301111301}
@@ -68,8 +69,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 76a8878ac585db2468d0ac1b89d62230, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Sprite: {fileID: 21300064, guid: 74d18ca49c88c19498d73157115711a4, type: 3}
+  m_Color: {r: 0, g: 0.6132076, b: 0.05625779, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -79,6 +80,25 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!95 &8041314450186216762
+Animator:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2588993259836650488}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 645ee9f069da4864393048c68ca3d997, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorControllerStateOnDisable: 0
 --- !u!1 &2588993261301111300
 GameObject:
   m_ObjectHideFlags: 0
@@ -88,11 +108,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2588993261301111301}
-  - component: {fileID: 114344038953278658}
   - component: {fileID: 5453081928834996848}
   - component: {fileID: 3752340581148964981}
+  - component: {fileID: 8174552755669328804}
   m_Layer: 9
-  m_Name: Enemy
+  m_Name: Zombie
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -111,36 +131,10 @@ Transform:
   m_Children:
   - {fileID: 2588993259836650489}
   - {fileID: 1632113118339652074}
-  - {fileID: 2172249078792324121}
   - {fileID: 1583698942734192824}
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &114344038953278658
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2588993261301111300}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 582bd34933dac454fbfc856866e9ecf5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  pathPoints: []
-  navMeshTriIdx: 0
-  targetNavMeshTriIdx: 0
-  target: {fileID: 0}
-  radius: 0
-  id: 
-  desiredHeading: {x: 0, y: 0, z: 0}
-  playerTrans: {fileID: 0}
-  deathEvent:
-    m_PersistentCalls:
-      m_Calls: []
-    m_TypeName: UnityEngine.Events.UnityEvent, UnityEngine.CoreModule, Version=0.0.0.0,
-      Culture=neutral, PublicKeyToken=null
 --- !u!54 &5453081928834996848
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -170,50 +164,24 @@ SphereCollider:
   serializedVersion: 2
   m_Radius: 3
   m_Center: {x: 0, y: 3, z: 0}
---- !u!1 &3057265088892871775
-GameObject:
+--- !u!114 &8174552755669328804
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2172249078792324121}
-  - component: {fileID: 8961463754334613816}
-  m_Layer: 11
-  m_Name: Resurrectee
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2172249078792324121
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3057265088892871775}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
-  m_Father: {fileID: 2588993261301111301}
-  m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!135 &8961463754334613816
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3057265088892871775}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 1
+  m_GameObject: {fileID: 2588993261301111300}
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 3
-  m_Center: {x: 0, y: 2.5, z: 0}
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 366ba933ba3f3cf47a7c905a89327557, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  pathPoints: []
+  navMeshTriIdx: 0
+  targetNavMeshTriIdx: 0
+  target: {fileID: 0}
+  radius: 0
+  desiredHeading: {x: 0, y: 0, z: 0}
 --- !u!1 &4538504416181910000
 GameObject:
   m_ObjectHideFlags: 0
@@ -243,7 +211,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 2588993261301111301}
-  m_RootOrder: 3
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!135 &9114415673264382333
 SphereCollider:
