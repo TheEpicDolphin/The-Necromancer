@@ -89,7 +89,7 @@ public class PlayerMovementController : MonoBehaviour
         if (Input.GetMouseButton(0))
         {
             //equipedMagic.Cast();
-            firearm.Shoot(animator, ref inventory, hand.position, hand.forward);
+            firearm.Shoot(animator, ref inventory);
         }
 
         

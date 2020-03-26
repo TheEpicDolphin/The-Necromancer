@@ -39,7 +39,7 @@ public class Firearm : MonoBehaviour
         
     }
 
-    public void Shoot(Animator animator, ref Inventory inventory, Vector3 origin, Vector3 dir)
+    public void Shoot(Animator animator, ref Inventory inventory)
     {
 
         if (inventory.handgunAmmo > 0)
@@ -49,7 +49,7 @@ public class Firearm : MonoBehaviour
                 nextAttackTime = Time.time + coolDown;
 
                 //Raycast to shooting location
-                Ray ray = new Ray(origin, dir);
+                Ray ray = new Ray(projectileOrigin.position, transform.forward);
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit, 1000.0f))
                 {
@@ -59,7 +59,7 @@ public class Firearm : MonoBehaviour
 
 
                 }
-                Debug.DrawRay(origin, 10.0f * dir, Color.cyan, 0.5f);
+                Debug.DrawRay(projectileOrigin.position, 10.0f * transform.forward, Color.cyan, 0.5f);
                 //Animate player
                 //animator.SetTrigger(Animator.StringToHash("Fire"));
                 inventory.handgunAmmo -= 1;
