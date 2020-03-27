@@ -1,0 +1,33 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Inverter : Decorator
+{
+    public Inverter(BehaviorTreeNode child) : base(child)
+    {
+
+    }
+
+    public override NodeStatus OnBehave(BehaviorState state)
+    {
+        switch (child.Behave(state))
+        {
+            case NodeStatus.RUNNING:
+                return NodeStatus.RUNNING;
+
+            case NodeStatus.SUCCESS:
+                return NodeStatus.FAILURE;
+
+            case NodeStatus.FAILURE:
+                return NodeStatus.SUCCESS;
+        }
+
+        Debug.Log("SHOULD NOT GET HERE");
+        return NodeStatus.FAILURE;
+    }
+
+    public override void OnReset()
+    {
+    }
+}

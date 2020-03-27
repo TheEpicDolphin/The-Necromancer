@@ -21,6 +21,8 @@ public class Zombie : NavAgent
         maxSpeed = 12.0f;
         healthBar = transform.Find("HealthBarCanvas").gameObject.GetComponent<HealthBar>();
 
+
+
     }
 
     private void FixedUpdate()
@@ -67,6 +69,51 @@ public class Zombie : NavAgent
             desiredHeading = rb.velocity;
         }
 
+    }
 
+
+    BehaviorTreeNode CreateBehaviourTree()
+    {
+        Sequence separate = new Sequence("separate",
+            new TooCloseToEnemy(0.2f),
+            new SetRandomDestination(),
+            new Move());
+
+        Sequence moveTowardsEnemy = new Sequence("moveTowardsEnemy",
+            new HasEnemy(),
+            new SetMoveTargetToEnemy(),
+            new Inverter(new CanAttackEnemy()),
+            new Inverter(new Succeeder(new Move())));
+
+        Sequence attackEnemy = new Sequence("attackEnemy",
+            new HasEnemy(),
+            new CanAttackEnemy(),
+            new StopMoving(),
+            new AttackEnemy());
+
+        Sequence needHeal = new Sequence("needHeal",
+            new Inverter(new AmIHurt(15)),
+            new AmIHurt(35),
+            new FindClosestHeal(30),
+            new Move());
+
+        Selector chooseEnemy = new Selector("chooseEnemy",
+            new TargetNemesis(),
+            new TargetClosestEnemy(30));
+
+        Sequence collectPowerup = new Sequence("collectPowerup",
+            new FindClosestPowerup(50),
+            new Move());
+
+        Selector fightOrFlight = new Selector("fightOrFlight",
+            new Inverter(new Succeeder(chooseEnemy)),
+            separate,
+            needHeal,
+            moveTowardsEnemy,
+            attackEnemy);
+
+        Repeater repeater = new Repeater(fightOrFlight);
+
+        return repeater;
     }
 }
