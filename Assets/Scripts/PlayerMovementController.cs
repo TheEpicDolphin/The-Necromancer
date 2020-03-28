@@ -119,5 +119,14 @@ public class PlayerMovementController : MonoBehaviour
 
     }
 
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.GetComponent<Zombie>())
+        {
+            Zombie zombieAI = other.GetComponent<Zombie>();
+            zombieAI.zbt
+        }
+    }
+
 }
 

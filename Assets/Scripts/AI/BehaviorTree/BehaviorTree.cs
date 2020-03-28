@@ -6,19 +6,21 @@ using UnityEngine.Events;
 //Event driven!
 public class BehaviorTree
 {
-    BTNode rootNode;
-    BTNode runningNode;
+    protected BTNode rootNode;
+    protected BTNode runningNode;
 
-    List<BTNode> inOrderTraversal;
+    protected List<BTNode> inOrderEventNodes;
+    Dictionary<string, Conditional> eventMap;
     
     public BehaviorTree(BTNode root)
     {
         this.rootNode = root;
-        
-
     }
 
-
     
+    public void InvokeEvent(string eventNodeName)
+    {
+        
+    }
 }
 

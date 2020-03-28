@@ -6,6 +6,7 @@ public class Zombie : NavAgent
 {
     HealthBar healthBar;
     Animator animator;
+    public ZombieBehaviorTree zbt;
 
     // Start is called before the first frame update
     new void Start()
