@@ -14,7 +14,7 @@ public abstract class BehaviorState
 
 }
 
-public abstract class BehaviorTreeNode
+public abstract class BTNode
 {
     public bool starting = true;
     protected bool debug = false;

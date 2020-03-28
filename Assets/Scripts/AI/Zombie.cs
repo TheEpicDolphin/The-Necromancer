@@ -21,8 +21,6 @@ public class Zombie : NavAgent
         maxSpeed = 12.0f;
         healthBar = transform.Find("HealthBarCanvas").gameObject.GetComponent<HealthBar>();
 
-
-
     }
 
     private void FixedUpdate()
@@ -71,9 +69,10 @@ public class Zombie : NavAgent
 
     }
 
-
+    
     BehaviorTreeNode CreateBehaviourTree()
     {
+        /*
         Sequence separate = new Sequence("separate",
             new TooCloseToEnemy(0.2f),
             new SetRandomDestination(),
@@ -113,7 +112,39 @@ public class Zombie : NavAgent
             attackEnemy);
 
         Repeater repeater = new Repeater(fightOrFlight);
+        return repeater;
+        */
 
+
+        Sequence inAttackRange = new Sequence("inAttackRange",
+                new InRange(1.5f * radius),
+                new Attack()
+            );
+
+        Sequence engagePlayer = new Sequence("engagePlayer",
+            new IsPlayerInSight(),
+            chooseExposedPlayer,
+            new FaceTarget(),
+            new Inverter(inAttackRange),
+            new MoveAI()
+            );
+
+        Sequence engageBarricade = new Sequence("engageBarricade",
+            new isBarricadeInSight(),
+            new FaceTarget(),
+            new MoveAI()
+            );
+
+        Selector main = new Selector("main",
+            //Use event here
+            new IsKnockedBack(),
+            engagePlayer,
+            engageBarricade,
+            new Wander()
+            );
+
+        Repeater repeater = new Repeater(main);
         return repeater;
     }
+    
 }

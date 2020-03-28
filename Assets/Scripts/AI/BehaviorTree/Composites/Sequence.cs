@@ -6,7 +6,7 @@ public class Sequence : Composite
 {
     int currentChild = 0;
 
-    public Sequence(string compositeName, params BehaviorTreeNode[] nodes) : base(compositeName, nodes)
+    public Sequence(string compositeName, params BTNode[] nodes) : base(compositeName, nodes)
     {
 
     }
@@ -41,7 +41,7 @@ public class Sequence : Composite
     public override void OnReset()
     {
         currentChild = 0;
-        foreach (BehaviorTreeNode child in children)
+        foreach (BTNode child in children)
         {
             child.Reset();
         }

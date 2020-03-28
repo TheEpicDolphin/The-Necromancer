@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class Decorator : BehaviorTreeNode
+public abstract class Decorator : BTNode
 {
-    protected BehaviorTreeNode child;
+    protected BTNode child;
 
-    public Decorator(BehaviorTreeNode node)
+    public Decorator(BTNode node)
     {
         child = node;
     }

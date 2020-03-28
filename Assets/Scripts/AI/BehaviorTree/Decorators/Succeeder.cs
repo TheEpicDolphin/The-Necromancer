@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Succeeder : Decorator
 {
-    public Succeeder(BehaviorTreeNode child) : base(child)
+    public Succeeder(BTNode child) : base(child)
     {
 
     }

@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Repeater : Decorator
 {
-    public Repeater(BehaviorTreeNode child) : base(child)
+    public Repeater(BTNode child) : base(child)
     {
 
     }

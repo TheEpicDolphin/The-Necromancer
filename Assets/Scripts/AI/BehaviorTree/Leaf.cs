@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class Leaf : BehaviorTreeNode
+public abstract class Leaf : BTNode
 {
 }
 

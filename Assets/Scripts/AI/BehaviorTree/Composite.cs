@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class Composite : BehaviorTreeNode
+public abstract class Composite : BTNode
 {
-    protected List<BehaviorTreeNode> children = new List<BehaviorTreeNode>();
+    protected List<BTNode> children = new List<BTNode>();
     public string compositeName;
 
-    public Composite(string name, params BehaviorTreeNode[] nodes)
+    public Composite(string name, params BTNode[] nodes)
     {
         compositeName = name;
         children.AddRange(nodes);

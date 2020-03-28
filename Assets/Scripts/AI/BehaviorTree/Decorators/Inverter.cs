@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Inverter : Decorator
 {
-    public Inverter(BehaviorTreeNode child) : base(child)
+    public Inverter(BTNode child) : base(child)
     {
 
     }
