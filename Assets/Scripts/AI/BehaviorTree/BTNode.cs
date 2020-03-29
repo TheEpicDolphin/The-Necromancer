@@ -20,6 +20,8 @@ public abstract class BTNode
     protected bool debug = false;
     public int ticks = 0;
 
+    public BehaviorTree root;
+
     public virtual NodeStatus Behave(BehaviorState state)
     {
         NodeStatus status = OnBehave(state);

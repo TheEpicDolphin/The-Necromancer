@@ -6,6 +6,7 @@ using UnityEngine.Events;
 //Event driven!
 public class BehaviorTree
 {
+    public Blackboard blackboard;
     protected BTNode rootNode;
     protected BTNode runningNode;
 
