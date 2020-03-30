@@ -9,7 +9,7 @@ public class Inverter : Decorator
 
     }
 
-    public override NodeStatus OnBehave(BehaviorState state)
+    public override void OnBehave()
     {
         switch (child.Behave(state))
         {

@@ -8,20 +8,26 @@ public class BehaviorTree
 {
     public Blackboard blackboard;
     protected BTNode rootNode;
-    protected BTNode runningNode;
+    public Task runningTaskNode;
 
-    protected List<BTNode> inOrderEventNodes;
-    Dictionary<string, Conditional> eventMap;
+    protected List<BlackboardCondition> inOrderEventNodes;
+    
     
     public BehaviorTree(BTNode root)
     {
         this.rootNode = root;
+        runningTaskNode = null;
     }
 
     
-    public void InvokeEvent(string eventNodeName)
+    public void Execute()
     {
-        
+        runningTaskNode.Behave();
+    }
+
+    void RunHigherPriorityListeningNode()
+    {
+        //Use O(n) binary parent search alg from GLMX interview lol
     }
 }
 

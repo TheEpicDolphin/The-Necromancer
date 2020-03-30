@@ -9,5 +9,6 @@ public abstract class Decorator : BTNode
     public Decorator(BTNode node)
     {
         child = node;
+        child.parent = this;
     }
 }

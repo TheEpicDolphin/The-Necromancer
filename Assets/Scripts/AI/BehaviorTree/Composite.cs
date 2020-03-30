@@ -11,24 +11,22 @@ public abstract class Composite : BTNode
     {
         compositeName = name;
         children.AddRange(nodes);
+        foreach(BTNode child in children)
+        {
+            child.parent = this;
+        }
     }
 
-    public override NodeStatus Behave(BehaviorState state)
+    public override void Behave()
     {
         bool shouldLog = debug && ticks == 0 ? true : false;
         if (shouldLog)
         {
             Debug.Log("Running behaviour list: " + compositeName);
-        }    
-
-        NodeStatus status = base.Behave(state);
-
-        if (debug && status != NodeStatus.RUNNING)
-        {
-            Debug.Log("Behaviour list " + compositeName + " returned: " + status.ToString());
         }
-            
-        return status;
+
+        base.Behave();
     }
+
 
 }

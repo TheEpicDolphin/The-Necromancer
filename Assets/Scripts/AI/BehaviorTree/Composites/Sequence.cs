@@ -11,31 +11,34 @@ public class Sequence : Composite
 
     }
 
-    public override NodeStatus OnBehave(BehaviorState state)
+    public override void OnBehave()
     {
-        NodeStatus status = children[currentChild].Behave(state);
+        children[currentChild].Behave();
+    }
 
-        switch (status)
+    public override void OnChildStopped(TaskResult result)
+    {
+        switch (result)
         {
-            case NodeStatus.SUCCESS:
+            case TaskResult.SUCCESS:
                 currentChild++;
                 break;
 
-            case NodeStatus.FAILURE:
-                return NodeStatus.FAILURE;
+            case TaskResult.FAILURE:
+                Stopped(TaskResult.FAILURE);
+                break;      
         }
 
         if (currentChild >= children.Count)
         {
-            return NodeStatus.SUCCESS;
+            Stopped(TaskResult.SUCCESS);
         }
-        else if (status == NodeStatus.SUCCESS)
+        else if (result == TaskResult.SUCCESS)
         {
             // if we succeeded, don't wait for the next tick to process the next child
-            return OnBehave(state);
+            OnBehave();
         }
 
-        return NodeStatus.RUNNING;
     }
 
     public override void OnReset()

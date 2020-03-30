@@ -6,38 +6,43 @@ public class Selector : Composite
 {
     int currentChild = 0;
 
-    public Selector(string compositeName, params BehaviorTreeNode[] nodes) : base(compositeName, nodes)
+    public Selector(string compositeName, params BTNode[] nodes) : base(compositeName, nodes)
     {
 
     }
 
-    public override NodeStatus OnBehave(BehaviorState state)
+    public override void OnBehave()
     {
         if (currentChild >= children.Count)
         {
-            return NodeStatus.FAILURE;
+            Stopped(TaskResult.FAILURE);
+            return;
         }
 
-        NodeStatus ret = children[currentChild].Behave(state);
+        children[currentChild].Behave();
+    }
 
-        switch (ret)
+    public override void OnChildStopped(TaskResult result)
+    {
+
+        switch (result)
         {
-            case NodeStatus.SUCCESS:
-                return NodeStatus.SUCCESS;
-
-            case NodeStatus.FAILURE:
+            case TaskResult.SUCCESS:
+                Stopped(TaskResult.SUCCESS);
+                break;
+            case TaskResult.FAILURE:
                 currentChild++;
-
                 // If we failed, immediately process the next child
-                return OnBehave(state);
+                OnBehave();
+                break;
         }
-        return NodeStatus.RUNNING;
+        
     }
 
     public override void OnReset()
     {
         currentChild = 0;
-        foreach (BehaviorTreeNode child in children)
+        foreach (BTNode child in children)
         {
             child.Reset();
         }

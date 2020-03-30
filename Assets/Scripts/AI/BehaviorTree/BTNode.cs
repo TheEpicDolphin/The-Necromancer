@@ -2,11 +2,16 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public enum NodeStatus
+public enum NodeState
+{
+    ACTIVE,     //If this node is in the currently active branch
+    INACTIVE    //Otherwise
+}
+
+public enum TaskResult
 {
     FAILURE,
-    SUCCESS,
-    RUNNING
+    SUCCESS
 }
 
 public abstract class BehaviorState
@@ -20,40 +25,34 @@ public abstract class BTNode
     protected bool debug = false;
     public int ticks = 0;
 
-    public BehaviorTree root;
+    protected NodeState currentState = NodeState.INACTIVE;
+    public BTNode parent;
+    protected BehaviorTree root;
 
-    public virtual NodeStatus Behave(BehaviorState state)
+
+    public virtual void Behave()
     {
-        NodeStatus status = OnBehave(state);
-
-        string result = "unknown";
-        switch (status)
-        {
-            case NodeStatus.FAILURE:
-                result = "failure";
-                break;
-            case NodeStatus.SUCCESS:
-                result = "success";
-                break;
-            case NodeStatus.RUNNING:
-                result = "running";
-                break;
-        }
-        Debug.Log("Behaving: " + GetType().Name + " - " + result);
-
+        currentState = NodeState.ACTIVE;
+        OnBehave();
         ticks++;
         starting = false;
-
-        if (status != NodeStatus.RUNNING)
-        {
-            Reset();
-        }
-            
-
-        return status;
     }
 
-    public abstract NodeStatus OnBehave(BehaviorState state);
+    /// THIS ABSOLUTLY HAS TO BE THE LAST CALL IN YOUR FUNCTION, NEVER MODIFY
+    /// ANY STATE AFTER CALLING Stopped !!!!
+    protected virtual void Stopped(TaskResult result)
+    {
+        currentState = NodeState.INACTIVE;
+        if (this.parent != null)
+        {
+            this.Reset();
+            this.parent.OnChildStopped(result);
+        }
+    }
+
+    public abstract void OnChildStopped(TaskResult result);
+
+    public abstract void OnBehave();
 
     public void Reset()
     {

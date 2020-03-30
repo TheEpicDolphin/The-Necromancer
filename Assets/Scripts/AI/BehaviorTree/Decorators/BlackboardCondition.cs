@@ -15,29 +15,35 @@ public abstract class BlackboardCondition : Decorator
         this.value = value;
     }
 
-
-    public override NodeStatus OnBehave(BehaviorState state)
+    public override TaskResult OnBehave()
     {
-        if ()
+        currentState = NodeState.STANDBY;
+        StartObserving();
+        if (IsConditionMet())
         {
-            switch (child.Behave(state))
+            switch (child.Behave())
             {
-                case NodeStatus.RUNNING:
-                    return NodeStatus.RUNNING;
+                case TaskResult.RUNNING:
+                    //This makes sure that only the node that is actually running is running
+                    currentState = NodeState.STANDBY;
+                    return NodeStatus.STANDBY;
 
-                case NodeStatus.SUCCESS:
-                    return NodeStatus.FAILURE;
+                case TaskResult.STANDBY:
+                    return NodeStatus.STANDBY;
 
-                case NodeStatus.FAILURE:
-                    return NodeStatus.SUCCESS;
+                case TaskResult.SUCCESS:
+                    return TaskResult.FAILURE;
+
+                case TaskResult.FAILURE:
+                    return TaskResult.SUCCESS;
             }
         }
-        return NodeStatus.FAILURE;
+        return TaskResult.FAILURE;
     }
 
     private void OnValueChanged(Blackboard.Type type, object newValue)
     {
-        Evaluate();
+        OnBehave();
     }
 
     bool IsConditionMet()
@@ -124,46 +130,11 @@ public abstract class BlackboardCondition : Decorator
         }
     }
 
-    protected void Evaluate()
+    void Evaluate()
     {
-        if (IsActive && !IsConditionMet())
+        if (IsConditionMet())
         {
-            if (stopsOnChange == Stops.SELF || stopsOnChange == Stops.BOTH || stopsOnChange == Stops.IMMEDIATE_RESTART)
-            {
-                // Debug.Log( this.key + " stopped self ");
-                this.Stop();
-            }
-        }
-        else if (!IsActive && IsConditionMet())
-        {
-            if (stopsOnChange == Stops.LOWER_PRIORITY || stopsOnChange == Stops.BOTH || stopsOnChange == Stops.IMMEDIATE_RESTART || stopsOnChange == Stops.LOWER_PRIORITY_IMMEDIATE_RESTART)
-            {
-                // Debug.Log( this.key + " stopped other ");
-                Container parentNode = this.ParentNode;
-                Node childNode = this;
-                while (parentNode != null && !(parentNode is Composite))
-                {
-                    childNode = parentNode;
-                    parentNode = parentNode.ParentNode;
-                }
-                Assert.IsNotNull(parentNode, "NTBtrStops is only valid when attached to a parent composite");
-                Assert.IsNotNull(childNode);
-                if (parentNode is Parallel)
-                {
-                    Assert.IsTrue(stopsOnChange == Stops.IMMEDIATE_RESTART, "On Parallel Nodes all children have the same priority, thus Stops.LOWER_PRIORITY or Stops.BOTH are unsupported in this context!");
-                }
-
-                if (stopsOnChange == Stops.IMMEDIATE_RESTART || stopsOnChange == Stops.LOWER_PRIORITY_IMMEDIATE_RESTART)
-                {
-                    if (isObserving)
-                    {
-                        isObserving = false;
-                        StopObserving();
-                    }
-                }
-
-                ((Composite)parentNode).StopLowerPriorityChildrenForChild(childNode, stopsOnChange == Stops.IMMEDIATE_RESTART || stopsOnChange == Stops.LOWER_PRIORITY_IMMEDIATE_RESTART);
-            }
+            root.RunHigherPriorityListeningNode();
         }
     }
 
