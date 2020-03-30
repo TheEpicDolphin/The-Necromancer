@@ -56,6 +56,7 @@ public class BehaviorTree
             runningNodeBranch[i].Reset();
         }
 
+        //I need to be careful here. I might run into Composites. This would be a problem. Figure something out!
         for (int i = 0; i < listenerNodeBranch.Count - d; i++)
         {
             //highestPriorityListener.
