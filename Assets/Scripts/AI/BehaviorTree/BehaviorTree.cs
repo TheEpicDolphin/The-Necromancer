@@ -11,6 +11,8 @@ public class BehaviorTree
     public Task runningTaskNode;
 
     protected List<BlackboardCondition> inOrderEventNodes;
+
+    //OBSERVERS ARE RECALCULATED ON EACH TICK OF THE TREE
     
     
     public BehaviorTree(BTNode root)
@@ -25,9 +27,41 @@ public class BehaviorTree
         runningTaskNode.Behave();
     }
 
-    void RunHigherPriorityListeningNode()
+    void RunHigherPriorityListeningNode(string eventName)
     {
-        //Use O(n) binary parent search alg from GLMX interview lol
+        //This works because observers are reset every tick of the behavior tree;
+        List<BTNode> runningNodeBranch = new List<BTNode>();
+        BTNode node = runningTaskNode;
+        while (node != null)
+        {
+            runningNodeBranch.Add(node);
+            node = node.parent;
+        }
+
+        List<BlackboardCondition> listeners = GetListeningNodesForEvent(eventName);
+        BlackboardCondition highestPriorityListener = GetHighestPriorityListener(listeners);
+
+
+        List<BTNode> listenerNodeBranch = new List<BTNode>();
+        node = highestPriorityListener;
+        while (node != null)
+        {
+            listenerNodeBranch.Add(node);
+            node = node.parent;
+        }
+
+        int d = Mathf.Max(runningNodeBranch.Count, listenerNodeBranch.Count) - Mathf.Min(runningNodeBranch.Count, listenerNodeBranch.Count);
+        for(int i = 0; i < runningNodeBranch.Count - d; i++)
+        {
+            runningNodeBranch[i].Reset();
+        }
+
+        for (int i = 0; i < listenerNodeBranch.Count - d; i++)
+        {
+            //highestPriorityListener.
+        }
+        
+        
     }
 }
 

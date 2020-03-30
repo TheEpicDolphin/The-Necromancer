@@ -15,30 +15,33 @@ public abstract class BlackboardCondition : Decorator
         this.value = value;
     }
 
-    public override TaskResult OnBehave()
+    public override void OnBehave()
     {
-        currentState = NodeState.STANDBY;
-        StartObserving();
+        root.AddObserver(this, key);
         if (IsConditionMet())
         {
-            switch (child.Behave())
-            {
-                case TaskResult.RUNNING:
-                    //This makes sure that only the node that is actually running is running
-                    currentState = NodeState.STANDBY;
-                    return NodeStatus.STANDBY;
-
-                case TaskResult.STANDBY:
-                    return NodeStatus.STANDBY;
-
-                case TaskResult.SUCCESS:
-                    return TaskResult.FAILURE;
-
-                case TaskResult.FAILURE:
-                    return TaskResult.SUCCESS;
-            }
+            child.Behave();
         }
-        return TaskResult.FAILURE;
+        else
+        {
+            Stopped(TaskResult.FAILURE);
+        }
+        
+    }
+
+    public void OnChildStopped(TaskResult result)
+    {
+        switch (result)
+        {
+            case TaskResult.SUCCESS:
+                Stopped(TaskResult.FAILURE);
+                break;
+
+            case TaskResult.FAILURE:
+                Stopped(TaskResult.SUCCESS);
+                break;
+        }
+        
     }
 
     private void OnValueChanged(Blackboard.Type type, object newValue)
@@ -130,6 +133,7 @@ public abstract class BlackboardCondition : Decorator
         }
     }
 
+    /*
     void Evaluate()
     {
         if (IsConditionMet())
@@ -137,8 +141,10 @@ public abstract class BlackboardCondition : Decorator
             root.RunHigherPriorityListeningNode();
         }
     }
+    */
 
     public override void OnReset()
     {
+        root.RemoveObserver(this, key);
     }
 }

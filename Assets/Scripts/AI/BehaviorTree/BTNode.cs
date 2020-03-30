@@ -42,7 +42,6 @@ public abstract class BTNode
     /// ANY STATE AFTER CALLING Stopped !!!!
     protected virtual void Stopped(TaskResult result)
     {
-        currentState = NodeState.INACTIVE;
         if (this.parent != null)
         {
             this.Reset();
@@ -56,6 +55,7 @@ public abstract class BTNode
 
     public void Reset()
     {
+        currentState = NodeState.INACTIVE;
         starting = true;
         ticks = 0;
         OnReset();

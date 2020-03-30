@@ -14,6 +14,7 @@ public abstract class Composite : BTNode
         foreach(BTNode child in children)
         {
             child.parent = this;
+            
         }
     }
 

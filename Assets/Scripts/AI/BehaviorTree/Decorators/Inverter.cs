@@ -11,20 +11,21 @@ public class Inverter : Decorator
 
     public override void OnBehave()
     {
-        switch (child.Behave(state))
+        child.Behave();
+    }
+
+    public override void OnChildStopped(TaskResult result)
+    {
+        switch (result)
         {
-            case NodeStatus.RUNNING:
-                return NodeStatus.RUNNING;
+            case TaskResult.SUCCESS:
+                Stopped(TaskResult.FAILURE);
+                break;
 
-            case NodeStatus.SUCCESS:
-                return NodeStatus.FAILURE;
-
-            case NodeStatus.FAILURE:
-                return NodeStatus.SUCCESS;
+            case TaskResult.FAILURE:
+                Stopped(TaskResult.SUCCESS);
+                break;
         }
-
-        Debug.Log("SHOULD NOT GET HERE");
-        return NodeStatus.FAILURE;
     }
 
     public override void OnReset()
