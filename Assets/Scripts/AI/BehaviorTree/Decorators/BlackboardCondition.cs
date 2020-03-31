@@ -17,7 +17,7 @@ public abstract class BlackboardCondition : Decorator
 
     public override void OnBehave()
     {
-        root.AddObserver(this, key);
+        root.AddObserver(key, this);
         if (IsConditionMet())
         {
             child.Behave();
@@ -29,7 +29,7 @@ public abstract class BlackboardCondition : Decorator
         
     }
 
-    public void OnChildStopped(TaskResult result)
+    public override void OnChildStopped(TaskResult result)
     {
         switch (result)
         {

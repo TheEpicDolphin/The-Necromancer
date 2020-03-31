@@ -10,11 +10,10 @@ public class BehaviorTree
     protected BTNode rootNode;
     public Task runningTaskNode;
 
-    protected List<BlackboardCondition> inOrderEventNodes;
+    //private Dictionary<string, List<System.Action<Type, object>>> observers = new Dictionary<string, List<System.Action<Type, object>>>();
+    private Dictionary<string, List<BlackboardCondition>> observers = new Dictionary<string, List<BlackboardCondition>>();
 
     //OBSERVERS ARE RECALCULATED ON EACH TICK OF THE TREE
-    
-    
     public BehaviorTree(BTNode root)
     {
         this.rootNode = root;
@@ -24,10 +23,11 @@ public class BehaviorTree
     
     public void Execute()
     {
+        observers = new Dictionary<string, List<BlackboardCondition>>();
         runningTaskNode.Behave();
     }
 
-    void RunHigherPriorityListeningNode(string eventName)
+    void NotifyListeningNodesForEvent(string eventName)
     {
         //This works because observers are reset every tick of the behavior tree;
         List<BTNode> runningNodeBranch = new List<BTNode>();
@@ -38,8 +38,8 @@ public class BehaviorTree
             node = node.parent;
         }
 
-        List<BlackboardCondition> listeners = GetListeningNodesForEvent(eventName);
-        BlackboardCondition highestPriorityListener = GetHighestPriorityListener(listeners);
+        List<BlackboardCondition> listeners = observers[eventName];
+        BlackboardCondition highestPriorityListener = listeners[0];
 
 
         List<BTNode> listenerNodeBranch = new List<BTNode>();
@@ -56,13 +56,18 @@ public class BehaviorTree
             runningNodeBranch[i].Reset();
         }
 
-        //I need to be careful here. I might run into Composites. This would be a problem. Figure something out!
-        for (int i = 0; i < listenerNodeBranch.Count - d; i++)
+        for (int i = 0; i < listenerNodeBranch.Count - d - 1; i++)
         {
-            //highestPriorityListener.
+            listenerNodeBranch[i].Reset();
         }
-        
-        
+
+        //Run the intersection node of the two branches
+        listenerNodeBranch[listenerNodeBranch.Count - d - 1].Behave();
+    }
+
+    public void AddObserver(string eventName, BlackboardCondition conditionNode)
+    {
+
     }
 }
 
