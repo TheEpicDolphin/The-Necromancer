@@ -56,12 +56,12 @@ public abstract class BlackboardCondition : Decorator
             return true;
         }
 
-        if (!this.root.blackboard.Isset(key))
+        if (!this.root.blackboard.IsSet(key))
         {
             return op == Operator.IS_NOT_SET;
         }
 
-        object o = this.root.blackboard.Get(key);
+        object o = this.root.blackboard[key];
 
         switch (this.op)
         {
@@ -145,6 +145,6 @@ public abstract class BlackboardCondition : Decorator
 
     public override void OnReset()
     {
-        root.RemoveObserver(this, key);
+        //root.RemoveObserver(this, key);
     }
 }

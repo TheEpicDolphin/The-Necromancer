@@ -9,16 +9,14 @@ public class Succeeder : Decorator
 
     }
 
-    public override NodeStatus OnBehave(BehaviorState state)
+    public override void OnBehave()
     {
-        NodeStatus status = child.Behave(state);
+        child.Behave();
+    }
 
-        if (status == NodeStatus.RUNNING)
-        {
-            return NodeStatus.RUNNING;
-        }
-            
-        return NodeStatus.SUCCESS;
+    public override void OnChildStopped(TaskResult result)
+    {
+        Stopped(TaskResult.SUCCESS);
     }
 
     public override void OnReset()

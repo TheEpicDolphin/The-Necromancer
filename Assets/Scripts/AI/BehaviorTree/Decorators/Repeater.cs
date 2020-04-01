@@ -9,15 +9,16 @@ public class Repeater : Decorator
 
     }
 
-    public override NodeStatus OnBehave(BehaviorState state)
+    public override void OnBehave()
     {
-        NodeStatus status = child.Behave(state);
-        if (status != NodeStatus.RUNNING)
-        {
-            Reset();
-            child.Reset();
-        }
-        return NodeStatus.SUCCESS;
+        child.Behave();
+    }
+
+    public override void OnChildStopped(TaskResult result)
+    {
+        Reset();
+        child.Reset();
+        Stopped(TaskResult.SUCCESS);
     }
 
     public override void OnReset()
