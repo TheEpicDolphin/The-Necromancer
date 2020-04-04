@@ -124,7 +124,7 @@ public class PlayerMovementController : MonoBehaviour
         if (other.GetComponent<Zombie>())
         {
             Zombie zombieAI = other.GetComponent<Zombie>();
-            zombieAI.zbt
+            
         }
     }
 

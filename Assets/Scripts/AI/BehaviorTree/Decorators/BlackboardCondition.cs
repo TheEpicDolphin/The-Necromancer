@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class BlackboardCondition : Decorator
+public class BlackboardCondition : Decorator
 {
     private string key;
     private object value;
     private Operator op;
 
-    public BlackboardCondition(BTNode child, string key, Operator op, object value) : base(child)
+    public BlackboardCondition(string key, Operator op, object value, BTNode child) : base(child)
     {
         this.op = op;
         this.key = key;

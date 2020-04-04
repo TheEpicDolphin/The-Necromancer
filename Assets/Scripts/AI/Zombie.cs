@@ -6,7 +6,7 @@ public class Zombie : NavAgent
 {
     HealthBar healthBar;
     Animator animator;
-    public ZombieBehaviorTree zbt;
+    public BehaviorTree bt;
 
     // Start is called before the first frame update
     new void Start()
@@ -22,6 +22,7 @@ public class Zombie : NavAgent
         maxSpeed = 12.0f;
         healthBar = transform.Find("HealthBarCanvas").gameObject.GetComponent<HealthBar>();
 
+        bt.SetRoot(CreateBehaviourTree());
     }
 
     private void FixedUpdate()
@@ -39,7 +40,8 @@ public class Zombie : NavAgent
             animator.SetFloat("dx", rb.velocity.x);
         }
 
-        MoveAgent();
+        //MoveAgent();
+        bt.Execute();
     }
 
     public override void MoveAgent()
@@ -71,7 +73,7 @@ public class Zombie : NavAgent
     }
 
     
-    BehaviorTreeNode CreateBehaviourTree()
+    BTNode CreateBehaviourTree()
     {
         /*
         Sequence separate = new Sequence("separate",
@@ -116,29 +118,24 @@ public class Zombie : NavAgent
         return repeater;
         */
 
-
-        Sequence inAttackRange = new Sequence("inAttackRange",
-                new InRange(1.5f * radius),
-                new Attack()
-            );
-
+        /*
         Sequence engagePlayer = new Sequence("engagePlayer",
-            new IsPlayerInSight(),
+            new BlackboardCondition(, "player_in_sight", Operator.IS_EQUAL, true),
             chooseExposedPlayer,
             new FaceTarget(),
-            new Inverter(inAttackRange),
+            new Succeeder(new BlackboardCondition(new Attack(), "in_attack_range", Operator.IS_SET)),
             new MoveAI()
             );
 
         Sequence engageBarricade = new Sequence("engageBarricade",
-            new isBarricadeInSight(),
+            new BlackboardCondition(, "barricade_in_sight", Operator.IS_EQUAL, true)
             new FaceTarget(),
             new MoveAI()
             );
 
         Selector main = new Selector("main",
             //Use event here
-            new IsKnockedBack(),
+            new BlackboardCondition(, "is_knocked_back", Operator.IS_EQUAL, true)
             engagePlayer,
             engageBarricade,
             new Wander()
@@ -146,6 +143,34 @@ public class Zombie : NavAgent
 
         Repeater repeater = new Repeater(main);
         return repeater;
+        */
+
+
+        BTNode root = new Service(0.5f, () => {
+            bt.blackboard["foo"] = !bt.blackboard.Get<bool>("foo");
+            bt.NotifyListeningNodesForEvent("foo");
+        },
+            new Selector(
+                new BlackboardCondition("foo", Operator.IS_EQUAL, true,
+                    new Sequence(
+                        new Action(() => Debug.Log("foo")),
+                        new WaitUntilStopped()
+                    )
+                ),
+
+                new Sequence(
+                    new Action(() => Debug.Log("bar")),
+                    new WaitUntilStopped()
+                )
+            )
+        );
+
+        return root;
     }
-    
+
+    private void OnTriggerEnter(Collider other)
+    {
+        //bt.SetBlackboardKey("in_attack_range", true);
+    }
+
 }

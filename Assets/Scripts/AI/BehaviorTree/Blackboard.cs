@@ -27,6 +27,16 @@ public class Blackboard
         }
     }
 
+    public T Get<T>(string key)
+    {
+        object value = this.data[key];
+        if (value == null)
+        {
+            return default(T);
+        }
+        return (T)value;
+    }
+
     public bool IsSet(string key)
     {
         return this.data.ContainsKey(key);

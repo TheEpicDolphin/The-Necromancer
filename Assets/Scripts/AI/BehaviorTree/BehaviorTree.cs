@@ -27,7 +27,7 @@ public class BehaviorTree
         runningTaskNode.Behave();
     }
 
-    void NotifyListeningNodesForEvent(string eventName)
+    public void NotifyListeningNodesForEvent(string eventName)
     {
         //This works because observers are reset every tick of the behavior tree;
         List<BTNode> runningNodeBranch = new List<BTNode>();
@@ -68,6 +68,11 @@ public class BehaviorTree
     public void AddObserver(string eventName, BlackboardCondition conditionNode)
     {
 
+    }
+
+    public void SetRoot(BTNode root)
+    {
+        rootNode = root;
     }
 }
 
