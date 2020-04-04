@@ -5,7 +5,7 @@ using System;
 
 public class Service : Decorator
 {
-    
+    //Set this to a gameobject
     private class CoroutineRunner : MonoBehaviour {
         private static CoroutineRunner _instance;
         public static CoroutineRunner Instance { get { return _instance; } }
@@ -27,7 +27,7 @@ public class Service : Decorator
     float interval;
     Coroutine serviceCoroutine;
 
-    public Service(float interval, Action action, BTNode child) : base(child)
+    public Service(string name, float interval, Action action, BTNode child) : base(name, child)
     {
         this.interval = interval;
         this.action = action;
@@ -35,6 +35,7 @@ public class Service : Decorator
 
     public override void OnBehave()
     {
+        Debug.Log(CoroutineRunner.Instance);
         serviceCoroutine = CoroutineRunner.Instance.StartCoroutine(ServiceCoroutine());
         child.Behave();
     }

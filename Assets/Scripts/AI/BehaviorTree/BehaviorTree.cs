@@ -8,7 +8,7 @@ public class BehaviorTree
 {
     public Blackboard blackboard;
     protected BTNode rootNode;
-    public Task runningTaskNode;
+    public BTNode runningTaskNode;
 
     //private Dictionary<string, List<System.Action<Type, object>>> observers = new Dictionary<string, List<System.Action<Type, object>>>();
     private Dictionary<string, List<BlackboardCondition>> observers = new Dictionary<string, List<BlackboardCondition>>();
@@ -16,8 +16,9 @@ public class BehaviorTree
     //OBSERVERS ARE RECALCULATED ON EACH TICK OF THE TREE
     public BehaviorTree(BTNode root)
     {
-        this.rootNode = root;
-        runningTaskNode = null;
+        rootNode = root;
+        runningTaskNode = root;
+        blackboard = new Blackboard();
     }
 
     

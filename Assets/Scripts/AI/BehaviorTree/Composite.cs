@@ -7,7 +7,7 @@ public abstract class Composite : BTNode
     protected List<BTNode> children = new List<BTNode>();
     public string compositeName;
 
-    public Composite(string name, params BTNode[] nodes)
+    public Composite(string name, params BTNode[] nodes) : base(name)
     {
         compositeName = name;
         children.AddRange(nodes);

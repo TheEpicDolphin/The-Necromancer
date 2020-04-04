@@ -6,7 +6,7 @@ public class Zombie : NavAgent
 {
     HealthBar healthBar;
     Animator animator;
-    public BehaviorTree bt;
+    BehaviorTree bt;
 
     // Start is called before the first frame update
     new void Start()
@@ -22,7 +22,8 @@ public class Zombie : NavAgent
         maxSpeed = 12.0f;
         healthBar = transform.Find("HealthBarCanvas").gameObject.GetComponent<HealthBar>();
 
-        bt.SetRoot(CreateBehaviourTree());
+        bt = new BehaviorTree(CreateBehaviourTree());
+        bt.blackboard["foo"] = false;
     }
 
     private void FixedUpdate()
@@ -145,22 +146,32 @@ public class Zombie : NavAgent
         return repeater;
         */
 
-
-        BTNode root = new Service(0.5f, () => {
-            bt.blackboard["foo"] = !bt.blackboard.Get<bool>("foo");
-            bt.NotifyListeningNodesForEvent("foo");
-        },
-            new Selector(
-                new BlackboardCondition("foo", Operator.IS_EQUAL, true,
-                    new Sequence(
-                        new Action(() => Debug.Log("foo")),
-                        new WaitUntilStopped()
+        
+        BTNode root = new Service("", 1.0f, () => {
+                bt.blackboard["foo"] = !bt.blackboard.Get<bool>("foo");
+                bt.NotifyListeningNodesForEvent("foo");
+            },
+            new Selector("",
+                new BlackboardCondition("", "foo", Operator.IS_EQUAL, true,
+                    new Sequence("",
+                        new BTAction("", () =>
+                            {
+                                Debug.Log("foo");
+                                return TaskResult.SUCCESS;
+                            }
+                        ),
+                        new Wait("")
                     )
                 ),
 
-                new Sequence(
-                    new Action(() => Debug.Log("bar")),
-                    new WaitUntilStopped()
+                new Sequence("",
+                    new BTAction("", () =>
+                        {
+                            Debug.Log("bar");
+                            return TaskResult.SUCCESS;
+                        }
+                    ),
+                    new Wait("")
                 )
             )
         );

@@ -1,25 +1,29 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
-public class Succeeder : Decorator
+public class BTAction : Task
 {
-    public Succeeder(string name, BTNode child) : base(name, child)
-    {
+    Func<TaskResult> action;
 
+    public BTAction(string name, Func<TaskResult> action) : base(name)
+    {
+        this.action = action;
     }
 
     public override void OnBehave()
     {
-        child.Behave();
+        Stopped(action());
     }
 
     public override void OnChildStopped(TaskResult result)
     {
-        Stopped(TaskResult.SUCCESS);
+        
     }
 
     public override void OnReset()
     {
+        
     }
 }

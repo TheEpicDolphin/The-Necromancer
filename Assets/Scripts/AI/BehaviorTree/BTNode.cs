@@ -24,11 +24,16 @@ public abstract class BTNode
     public bool starting = true;
     protected bool debug = false;
     public int ticks = 0;
+    protected string name;
 
     protected NodeState currentState = NodeState.INACTIVE;
     public BTNode parent;
     protected BehaviorTree root;
 
+    public BTNode(string name)
+    {
+        this.name = name;
+    }
 
     public virtual void Behave()
     {

@@ -2,24 +2,25 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Succeeder : Decorator
+public class Wait : Task
 {
-    public Succeeder(string name, BTNode child) : base(name, child)
+    public Wait(string name) : base(name)
     {
-
+        
     }
 
     public override void OnBehave()
     {
-        child.Behave();
+        //Do nothing
     }
 
     public override void OnChildStopped(TaskResult result)
     {
-        Stopped(TaskResult.SUCCESS);
+        //Has no children
     }
 
     public override void OnReset()
     {
+        //Do nothing
     }
 }

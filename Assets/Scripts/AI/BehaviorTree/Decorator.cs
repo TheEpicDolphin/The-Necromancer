@@ -6,7 +6,7 @@ public abstract class Decorator : BTNode
 {
     protected BTNode child;
 
-    public Decorator(BTNode node)
+    public Decorator(string name, BTNode node) : base(name)
     {
         child = node;
         child.parent = this;

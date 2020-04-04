@@ -8,7 +8,7 @@ public class BlackboardCondition : Decorator
     private object value;
     private Operator op;
 
-    public BlackboardCondition(string key, Operator op, object value, BTNode child) : base(child)
+    public BlackboardCondition(string name, string key, Operator op, object value, BTNode child) : base(name, child)
     {
         this.op = op;
         this.key = key;
