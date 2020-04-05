@@ -29,5 +29,13 @@ public abstract class Composite : BTNode
         base.Behave();
     }
 
+    public override void ProvideMetaData(BehaviorTree tree)
+    {
+        base.ProvideMetaData(tree);
+        foreach (BTNode child in children)
+        {
+            child.ProvideMetaData(tree);
+        }
+    }
 
 }

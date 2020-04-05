@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class BlackboardCondition : Decorator
 {
-    private string key;
+    public string key;
     private object value;
     private Operator op;
+    private Blackboard blackboard;
 
     public BlackboardCondition(string name, string key, Operator op, object value, BTNode child) : base(name, child)
     {
@@ -17,7 +18,7 @@ public class BlackboardCondition : Decorator
 
     public override void OnBehave()
     {
-        root.AddObserver(key, this);
+        blackboard.AddObserver(this);
         if (IsConditionMet())
         {
             child.Behave();
@@ -29,16 +30,22 @@ public class BlackboardCondition : Decorator
         
     }
 
+    public override void ProvideMetaData(BehaviorTree root)
+    {
+        blackboard = root.blackboard;
+        base.ProvideMetaData(root);
+    }
+
     public override void OnChildStopped(TaskResult result)
     {
         switch (result)
         {
             case TaskResult.SUCCESS:
-                Stopped(TaskResult.FAILURE);
+                Stopped(TaskResult.SUCCESS);
                 break;
 
             case TaskResult.FAILURE:
-                Stopped(TaskResult.SUCCESS);
+                Stopped(TaskResult.FAILURE);
                 break;
         }
         
@@ -56,12 +63,12 @@ public class BlackboardCondition : Decorator
             return true;
         }
 
-        if (!this.root.blackboard.IsSet(key))
+        if (!this.blackboard.IsSet(key))
         {
             return op == Operator.IS_NOT_SET;
         }
 
-        object o = this.root.blackboard[key];
+        object o = this.blackboard[key];
 
         switch (this.op)
         {

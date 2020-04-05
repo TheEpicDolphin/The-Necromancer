@@ -24,11 +24,14 @@ public abstract class BTNode
     public bool starting = true;
     protected bool debug = false;
     public int ticks = 0;
-    protected string name;
+    //protected string name;
+    public string name;
 
     protected NodeState currentState = NodeState.INACTIVE;
     public BTNode parent;
-    protected BehaviorTree root;
+
+    
+    protected BehaviorTree tree;
 
     public BTNode(string name)
     {
@@ -38,9 +41,14 @@ public abstract class BTNode
     public virtual void Behave()
     {
         currentState = NodeState.ACTIVE;
+        tree.runningTaskNode = this;
+        Debug.Log(name);
+
         OnBehave();
+
         ticks++;
         starting = false;
+        
     }
 
     /// THIS ABSOLUTLY HAS TO BE THE LAST CALL IN YOUR FUNCTION, NEVER MODIFY
@@ -68,4 +76,9 @@ public abstract class BTNode
 
     public abstract void OnReset();
 
+
+    public virtual void ProvideMetaData(BehaviorTree tree)
+    {
+        this.tree = tree;
+    }
 }

@@ -11,4 +11,10 @@ public abstract class Decorator : BTNode
         child = node;
         child.parent = this;
     }
+
+    public override void ProvideMetaData(BehaviorTree tree)
+    {
+        base.ProvideMetaData(tree);
+        child.ProvideMetaData(tree);
+    }
 }

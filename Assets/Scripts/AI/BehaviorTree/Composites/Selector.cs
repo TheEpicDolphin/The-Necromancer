@@ -24,7 +24,7 @@ public class Selector : Composite
 
     public override void OnChildStopped(TaskResult result)
     {
-
+        
         switch (result)
         {
             case TaskResult.SUCCESS:

@@ -24,6 +24,8 @@ public class Zombie : NavAgent
 
         bt = new BehaviorTree(CreateBehaviourTree());
         bt.blackboard["foo"] = false;
+        //Debug.Log("no errors yet");
+        //Debug.Log(bt.blackboard.Get<bool>("foo"));
     }
 
     private void FixedUpdate()
@@ -74,51 +76,9 @@ public class Zombie : NavAgent
     }
 
     
-    BTNode CreateBehaviourTree()
+    Root CreateBehaviourTree()
     {
-        /*
-        Sequence separate = new Sequence("separate",
-            new TooCloseToEnemy(0.2f),
-            new SetRandomDestination(),
-            new Move());
-
-        Sequence moveTowardsEnemy = new Sequence("moveTowardsEnemy",
-            new HasEnemy(),
-            new SetMoveTargetToEnemy(),
-            new Inverter(new CanAttackEnemy()),
-            new Inverter(new Succeeder(new Move())));
-
-        Sequence attackEnemy = new Sequence("attackEnemy",
-            new HasEnemy(),
-            new CanAttackEnemy(),
-            new StopMoving(),
-            new AttackEnemy());
-
-        Sequence needHeal = new Sequence("needHeal",
-            new Inverter(new AmIHurt(15)),
-            new AmIHurt(35),
-            new FindClosestHeal(30),
-            new Move());
-
-        Selector chooseEnemy = new Selector("chooseEnemy",
-            new TargetNemesis(),
-            new TargetClosestEnemy(30));
-
-        Sequence collectPowerup = new Sequence("collectPowerup",
-            new FindClosestPowerup(50),
-            new Move());
-
-        Selector fightOrFlight = new Selector("fightOrFlight",
-            new Inverter(new Succeeder(chooseEnemy)),
-            separate,
-            needHeal,
-            moveTowardsEnemy,
-            attackEnemy);
-
-        Repeater repeater = new Repeater(fightOrFlight);
-        return repeater;
-        */
-
+     
         /*
         Sequence engagePlayer = new Sequence("engagePlayer",
             new BlackboardCondition(, "player_in_sight", Operator.IS_EQUAL, true),
@@ -147,33 +107,36 @@ public class Zombie : NavAgent
         */
 
         
-        BTNode root = new Service("", 1.0f, () => {
+        Root root = new Root("root",
+            new Service("Service: 0", GetComponent<MonoBehaviour>(), 1.0f, () => {
                 bt.blackboard["foo"] = !bt.blackboard.Get<bool>("foo");
                 bt.NotifyListeningNodesForEvent("foo");
             },
-            new Selector("",
-                new BlackboardCondition("", "foo", Operator.IS_EQUAL, true,
-                    new Sequence("",
-                        new BTAction("", () =>
+                new Selector("Selector: 0",
+                    new BlackboardCondition("Blackboard Condition: 0", "foo", Operator.IS_EQUAL, true,
+                        new Sequence("Sequence: 0",
+                            new BTAction("Action: Foo", () =>
                             {
                                 Debug.Log("foo");
                                 return TaskResult.SUCCESS;
                             }
-                        ),
-                        new Wait("")
-                    )
-                ),
+                            ),
+                            new Wait("Wait: 0")
+                        )
+                    ),
 
-                new Sequence("",
-                    new BTAction("", () =>
+                    new Sequence("Sequence: 1",
+                        new BTAction("Action: Bar", () =>
                         {
                             Debug.Log("bar");
                             return TaskResult.SUCCESS;
                         }
-                    ),
-                    new Wait("")
+                        ),
+                        new Wait("Wait: 1")
+                    )
                 )
             )
+            
         );
 
         return root;

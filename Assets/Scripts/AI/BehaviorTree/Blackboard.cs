@@ -13,7 +13,10 @@ public class Blackboard
     }
 
     private Dictionary<string, object> data = new Dictionary<string, object>();
-    private Dictionary<string, List<System.Action<Type, object>>> observers = new Dictionary<string, List<System.Action<Type, object>>>();
+    //private Dictionary<string, List<System.Action<Type, object>>> observers = new Dictionary<string, List<System.Action<Type, object>>>();
+    public List<BlackboardCondition> observerQueue = new List<BlackboardCondition>();
+
+
 
     public object this[string key]
     {
@@ -42,4 +45,8 @@ public class Blackboard
         return this.data.ContainsKey(key);
     }
 
+    public void AddObserver(BlackboardCondition conditionNode)
+    {
+        observerQueue.Add(conditionNode);
+    }
 }

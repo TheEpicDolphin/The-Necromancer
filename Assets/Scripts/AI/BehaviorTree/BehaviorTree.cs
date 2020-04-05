@@ -7,24 +7,23 @@ using UnityEngine.Events;
 public class BehaviorTree
 {
     public Blackboard blackboard;
-    protected BTNode rootNode;
+    protected Root rootNode;
     public BTNode runningTaskNode;
 
-    //private Dictionary<string, List<System.Action<Type, object>>> observers = new Dictionary<string, List<System.Action<Type, object>>>();
-    private Dictionary<string, List<BlackboardCondition>> observers = new Dictionary<string, List<BlackboardCondition>>();
-
     //OBSERVERS ARE RECALCULATED ON EACH TICK OF THE TREE
-    public BehaviorTree(BTNode root)
+    public BehaviorTree(Root root)
     {
         rootNode = root;
         runningTaskNode = root;
         blackboard = new Blackboard();
+
+        rootNode.ProvideMetaData(this);
     }
 
     
     public void Execute()
     {
-        observers = new Dictionary<string, List<BlackboardCondition>>();
+        //Debug.Log(runningTaskNode.GetType());
         runningTaskNode.Behave();
     }
 
@@ -39,9 +38,23 @@ public class BehaviorTree
             node = node.parent;
         }
 
-        List<BlackboardCondition> listeners = observers[eventName];
-        BlackboardCondition highestPriorityListener = listeners[0];
-
+        List<BlackboardCondition> tempObserverQueue = new List<BlackboardCondition>();
+        BlackboardCondition highestPriorityListener = null;
+        //Debug.Log(blackboard.observerQueue.Count);
+        foreach (BlackboardCondition observer in blackboard.observerQueue)
+        {
+            if (observer.key == eventName)
+            {
+                highestPriorityListener = observer;
+                break;
+            }
+            tempObserverQueue.Add(observer);
+        }
+        if (highestPriorityListener == null)
+        {
+            return;
+        }
+        blackboard.observerQueue = tempObserverQueue;
 
         List<BTNode> listenerNodeBranch = new List<BTNode>();
         node = highestPriorityListener;
@@ -62,18 +75,12 @@ public class BehaviorTree
             listenerNodeBranch[i].Reset();
         }
 
+        Debug.Log("the fuck");
         //Run the intersection node of the two branches
         listenerNodeBranch[listenerNodeBranch.Count - d - 1].Behave();
     }
 
-    public void AddObserver(string eventName, BlackboardCondition conditionNode)
-    {
+    
 
-    }
-
-    public void SetRoot(BTNode root)
-    {
-        rootNode = root;
-    }
 }
 

@@ -5,38 +5,23 @@ using System;
 
 public class Service : Decorator
 {
-    //Set this to a gameobject
-    private class CoroutineRunner : MonoBehaviour {
-        private static CoroutineRunner _instance;
-        public static CoroutineRunner Instance { get { return _instance; } }
-
-        private void Awake()
-        {
-            if (_instance != null && _instance != this)
-            {
-                Destroy(this.gameObject);
-            }
-            else
-            {
-                _instance = this;
-            }
-        }
-    }
 
     Action action;
     float interval;
     Coroutine serviceCoroutine;
+    MonoBehaviour coroutineRunner;
 
-    public Service(string name, float interval, Action action, BTNode child) : base(name, child)
+    public Service(string name, MonoBehaviour coroutineRunner, float interval, Action action, BTNode child) : base(name, child)
     {
         this.interval = interval;
         this.action = action;
+        this.coroutineRunner = coroutineRunner;
     }
 
     public override void OnBehave()
     {
-        Debug.Log(CoroutineRunner.Instance);
-        serviceCoroutine = CoroutineRunner.Instance.StartCoroutine(ServiceCoroutine());
+        Debug.Log("how");
+        serviceCoroutine = coroutineRunner.StartCoroutine(ServiceCoroutine());
         child.Behave();
     }
 
@@ -66,6 +51,6 @@ public class Service : Decorator
 
     public override void OnReset()
     {
-        CoroutineRunner.Instance.StopCoroutine(serviceCoroutine);
+        coroutineRunner.StopCoroutine(serviceCoroutine);
     }
 }
