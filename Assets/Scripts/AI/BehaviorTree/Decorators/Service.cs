@@ -20,7 +20,6 @@ public class Service : Decorator
 
     public override void OnBehave()
     {
-        Debug.Log("how");
         serviceCoroutine = coroutineRunner.StartCoroutine(ServiceCoroutine());
         child.Behave();
     }
