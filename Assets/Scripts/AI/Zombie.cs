@@ -37,7 +37,7 @@ public class Zombie : NavAgent
         animator.SetFloat("facingY", faceDir.z);
         animator.SetFloat("facingX", faceDir.x);
 
-        if(rb.velocity.magnitude > 0.01f)
+        if (rb.velocity.magnitude > 0.01f)
         {
             animator.SetFloat("dy", rb.velocity.z);
             animator.SetFloat("dx", rb.velocity.x);
@@ -73,6 +73,22 @@ public class Zombie : NavAgent
             desiredHeading = rb.velocity;
         }
 
+        animator.SetFloat("movement", rb.velocity.magnitude);
+        if (rb.velocity.magnitude > 0.01f)
+        {
+            animator.SetFloat("dy", rb.velocity.z);
+            animator.SetFloat("dx", rb.velocity.x);
+        }
+
+    }
+
+    void FaceTarget()
+    {
+        Vector3 faceTargetLoc = pathPoints[0];
+        Vector3 faceDir = (faceTargetLoc - transform.position).normalized;
+
+        animator.SetFloat("facingY", faceDir.z);
+        animator.SetFloat("facingX", faceDir.x);
     }
 
     
@@ -90,13 +106,21 @@ public class Zombie : NavAgent
             },
                 new Repeater("",
                     new Sequence("",
-                        new FaceTarget(this, target),
+                        new BTAction("", () =>
+                        {
+                            FaceTarget();
+                            return TaskResult.SUCCESS;
+                        }),
                         new Succeeder("", 
                             new BlackboardCondition("", "in_attack_range", Operator.IS_EQUAL, true, 
                                 attackPlayer
                             )
                         ),
-                        new MoveAI(this, target)
+                        new BTAction("", () =>
+                        {
+                            MoveAgent();
+                            return TaskResult.SUCCESS;
+                        })
                     )
                 )
             )

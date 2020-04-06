@@ -5,7 +5,7 @@ using VecUtils;
 
 public class NavAgent : MonoBehaviour
 {
-    public List<Vector3> pathPoints;
+    protected List<Vector3> pathPoints;
     public int navMeshTriIdx;
     public int targetNavMeshTriIdx;
     public Transform target;
