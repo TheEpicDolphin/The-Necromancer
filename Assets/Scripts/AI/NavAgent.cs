@@ -33,11 +33,40 @@ public class NavAgent : MonoBehaviour
         pathPoints = new List<Vector3>();
         rb = GetComponent<Rigidbody>();
         nearbyObstacleRadius = 2 * maxSpeed * tau;
-        updateNavCoroutine = StartCoroutine(UpdateNav());
+        //updateNavCoroutine = StartCoroutine(UpdateNav());
     }
 
+    protected void UpdateNav()
+    {
+        if (target)
+        {
+            Vector3 agentStartPos = new Vector3(transform.position.x, 0.0f, transform.position.z);
+            Vector3 targetPosition = new Vector3(target.position.x, 0.0f, target.position.z);
+            int targetTriIdx = NavigationMesh.Instance.NavMeshTriFromPos(targetPosition);
+            if (targetTriIdx >= 0)
+            {
+                targetNavMeshTriIdx = targetTriIdx;
+            }
 
+            int agentTriIdx = NavigationMesh.Instance.NavMeshTriFromPos(agentStartPos);
+            if (agentTriIdx >= 0)
+            {
+                navMeshTriIdx = agentTriIdx;
+                pathPoints = NavigationMesh.Instance.GetShortestPath(navMeshTriIdx, targetNavMeshTriIdx, agentStartPos, targetPosition, radius);
+            }
+            else
+            {
+                //AI agent is out of bounds. Make it head towards last navigation mesh triangle
+                pathPoints = new List<Vector3>() { NavigationMesh.Instance.GetTriPosition(navMeshTriIdx) };
+            }
+        }
+        else
+        {
+            //TODO: what if there is no target
+        }
+    }
 
+    /*
     IEnumerator UpdateNav()
     {
         while (true)
@@ -72,6 +101,8 @@ public class NavAgent : MonoBehaviour
             yield return new WaitForSeconds(0.15f);
         }
     }
+    */
+
 
     private void LateUpdate()
     {

@@ -78,35 +78,60 @@ public class Zombie : NavAgent
     
     Root CreateBehaviourTree()
     {
-     
-        /*
-        Sequence engagePlayer = new Sequence("engagePlayer",
-            new BlackboardCondition(, "player_in_sight", Operator.IS_EQUAL, true),
+
+        Sequence attackPlayer = new Sequence("",
+                new AttackTarget()
+            );
+
+        Sequence engagePlayer = new Sequence("Sequence: engagePlayer",
             chooseExposedPlayer,
+            new Service("Service: Update Nav to enemy", GetComponent<MonoBehaviour>(), 0.1f, () => {
+                UpdateNav();
+            },
+                new Repeater("",
+                    new Sequence("",
+                        new FaceTarget(this, target),
+                        new Succeeder("", 
+                            new BlackboardCondition("", "in_attack_range", Operator.IS_EQUAL, true, 
+                                attackPlayer
+                            )
+                        ),
+                        new MoveAI(this, target)
+                    )
+                )
+            )
+        );
+
+        /*
+        Sequence engageBarricade = new Sequence("Sequence: engageBarricade",
             new FaceTarget(),
-            new Succeeder(new BlackboardCondition(new Attack(), "in_attack_range", Operator.IS_SET)),
             new MoveAI()
             );
+        */
 
-        Sequence engageBarricade = new Sequence("engageBarricade",
-            new BlackboardCondition(, "barricade_in_sight", Operator.IS_EQUAL, true)
-            new FaceTarget(),
-            new MoveAI()
-            );
-
-        Selector main = new Selector("main",
+        Selector main = new Selector("Selector: main",
             //Use event here
-            new BlackboardCondition(, "is_knocked_back", Operator.IS_EQUAL, true)
-            engagePlayer,
-            engageBarricade,
+            new BlackboardCondition("Blackboard Condition: is_knocked_back", "is_knocked_back", Operator.IS_EQUAL, true,
+                new BTAction("knockback animation", )
+            ),
+            new BlackboardCondition("Blackboard Condition: player_found", "player_found", Operator.IS_EQUAL, true,
+                engagePlayer
+            ),
+
+            /*
+            new BlackboardCondition("Blackboard Condition: barricade_in_sight", "barricade_in_sight", Operator.IS_EQUAL, true,
+                engageBarricade
+            ),
+            */
+
             new Wander()
             );
 
-        Repeater repeater = new Repeater(main);
-        return repeater;
-        */
 
+        Root root = new Root("root", main);
         
+
+        /*
         Root root = new Root("root",
             new Service("Service: 0", GetComponent<MonoBehaviour>(), 1.0f, () => {
                 bt.blackboard["foo"] = !bt.blackboard.Get<bool>("foo");
@@ -138,6 +163,7 @@ public class Zombie : NavAgent
             )
             
         );
+        */
 
         return root;
     }
