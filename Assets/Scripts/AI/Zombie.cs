@@ -82,21 +82,37 @@ public class Zombie : NavAgent
 
     }
 
-    void FaceTarget()
+    TaskResult FaceTarget()
     {
         Vector3 faceTargetLoc = pathPoints[0];
         Vector3 faceDir = (faceTargetLoc - transform.position).normalized;
 
         animator.SetFloat("facingY", faceDir.z);
         animator.SetFloat("facingX", faceDir.x);
+
+        return TaskResult.SUCCESS;
     }
 
+    IEnumerator Knockback(float duration)
+    {
+        yield return new WaitForSeconds(duration);
+        Debug.Log("Knockback!");
+    }
+
+    TaskResult AttackTarget()
+    {
+        //Start attack animation
+        return TaskResult.SUCCESS;
+    }
     
     Root CreateBehaviourTree()
     {
 
         Sequence attackPlayer = new Sequence("",
-                new AttackTarget()
+                new BTAction("", () =>
+                {
+                    return AttackTarget();
+                })
             );
 
         Sequence engagePlayer = new Sequence("Sequence: engagePlayer",
@@ -108,8 +124,7 @@ public class Zombie : NavAgent
                     new Sequence("",
                         new BTAction("", () =>
                         {
-                            FaceTarget();
-                            return TaskResult.SUCCESS;
+                            return FaceTarget();
                         }),
                         new Succeeder("", 
                             new BlackboardCondition("", "in_attack_range", Operator.IS_EQUAL, true, 
@@ -136,7 +151,7 @@ public class Zombie : NavAgent
         Selector main = new Selector("Selector: main",
             //Use event here
             new BlackboardCondition("Blackboard Condition: is_knocked_back", "is_knocked_back", Operator.IS_EQUAL, true,
-                new BTAction("knockback animation", )
+                new BTActionAsync("knockback animation", GetComponent<MonoBehaviour>(), Knockback(1.0f))
             ),
             new BlackboardCondition("Blackboard Condition: player_found", "player_found", Operator.IS_EQUAL, true,
                 engagePlayer
@@ -149,7 +164,7 @@ public class Zombie : NavAgent
             */
 
             new Wander()
-            );
+        );
 
 
         Root root = new Root("root", main);
